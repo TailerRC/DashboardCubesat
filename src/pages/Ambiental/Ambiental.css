@@ -1,0 +1,34 @@
+.empty-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.empty-view-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  max-width: 400px;
+}
+
+.empty-view-icon {
+  color: #2a2d35;
+  opacity: 0.6;
+}
+
+.empty-view-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+.empty-view-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
