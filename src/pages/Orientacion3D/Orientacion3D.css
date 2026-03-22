@@ -1,0 +1,218 @@
+.orientacion3d-view {
+  display: flex;
+  gap: 24px;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.visor-column {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; 
+}
+
+.controls-column {
+  flex: 1.2;
+  min-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  /* hide scrollbar for sleekness if needed, or style it */
+}
+
+.visor-title {
+  font-size: 16px;
+  color: #fff;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+/* Visor con recuadros en las esquinas según la imagen */
+.visor-container-frame {
+  flex: 1;
+  border: 1px solid #4a5460;
+  background-color: #111;
+  position: relative;
+  display: flex;
+  padding: 4px;
+}
+
+.visor-canvas-wrapper {
+  flex: 1;
+  background-color: #1a1a1a;
+  position: relative;
+  overflow: hidden;
+}
+
+.corner-tl, .corner-tr, .corner-bl, .corner-br {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: #fff;
+  border-style: solid;
+  border-width: 0;
+  z-index: 10;
+}
+
+.corner-tl { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
+.corner-tr { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; }
+.corner-bl { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; }
+.corner-br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Paneles Laterales */
+.panel-card {
+  background-color: #1a1e23;
+  border: 1px solid #2a3038;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin: 0 0 16px 0;
+}
+
+/* Euler Panel */
+.euler-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.euler-label {
+  font-size: 12px;
+  color: #a0aab5;
+  width: 60px;
+}
+
+.euler-bar-track {
+  flex: 1;
+  height: 8px;
+  background-color: #333;
+  border-radius: 4px;
+}
+
+.euler-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.1s linear;
+}
+
+.red-fill { background-color: #f44336; }
+.green-fill { background-color: #4caf50; }
+.blue-fill { background-color: #2196f3; }
+
+.euler-value {
+  font-size: 12px;
+  color: #fff;
+  width: 45px;
+  text-align: right;
+  font-family: monospace;
+}
+
+/* Movement Panel */
+.sensor-category {
+  font-size: 10px;
+  color: #88929c;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.sensor-grid {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sensor-box {
+  flex: 1;
+  border: 1px solid #4a5460;
+  border-radius: 4px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+}
+.sensor-box span:first-child { color: #a0aab5; margin-bottom: 4px; }
+.sensor-box span:last-child { color: #fff; font-weight: bold; }
+
+/* Manual Control Panel */
+.slider-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.slider-label {
+  font-size: 12px;
+  color: #a0aab5;
+  width: 60px;
+}
+
+.styled-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #333;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+
+.styled-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #88929c;
+  cursor: pointer;
+}
+
+.styled-slider:not(:disabled)::-webkit-slider-thumb {
+  background: #fff;
+}
+
+/* Simulation Mode Panel */
+.mode-buttons-row {
+  display: flex;
+  gap: 12px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px 0;
+  background-color: #111418;
+  border: 1px solid #3a424e;
+  color: #a0aab5;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  border-color: #666;
+}
+
+.active-auto {
+  background-color: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.active-manual {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+  color: #fff;
+}

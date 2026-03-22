@@ -8,7 +8,7 @@ const navItems = [
   { path: '/satelite', label: 'Satélite', icon: 'satellite' },
   { path: '/mision', label: 'Misión', icon: 'rocket' },
   { path: '/comunicacion', label: 'Comunicación', icon: 'comm' },
-  { path: '/orientacion', label: 'Orientación 3D', icon: 'cube' },
+  { path: '/orientacion3d', label: 'Orientación 3D', icon: 'cube' },
 ];
 
 const iconMap = {

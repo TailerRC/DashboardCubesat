@@ -1,34 +1,178 @@
-.empty-view {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-}
-
-.empty-view-content {
+.ambiental-view {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 24px;
+  height: 100%;
+}
+
+.ambiental-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
-  text-align: center;
-  max-width: 400px;
+  flex: 1;
 }
 
-.empty-view-icon {
-  color: #2a2d35;
-  opacity: 0.6;
+.ambiental-card {
+  background-color: #1a1e23;
+  border-radius: 6px;
+  padding: 24px;
+  border: 1px solid #2a3038;
+  display: flex;
+  flex-direction: column;
 }
 
-.empty-view-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #e0e0e0;
-  margin: 0;
-}
-
-.empty-view-subtitle {
+.ambiental-card .card-header {
   font-size: 14px;
-  color: #6b7280;
-  line-height: 1.6;
-  margin: 0;
+  font-weight: 500;
+  color: #a0aab5;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-main-value {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.card-main-value .value {
+  font-size: 48px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.card-main-value .unit {
+  font-size: 16px;
+  color: #a0aab5;
+  font-weight: 500;
+}
+
+/* Gauge container */
+.gauge-container {
+  margin-top: auto;
+  margin-bottom: 12px;
+}
+
+.multi-section-gauge {
+  margin-bottom: 0px;
+}
+
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #88929c;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.gauge-labels span {
+  flex: 1;
+  position: relative;
+}
+
+.gauge-bar {
+  height: 6px;
+  position: relative;
+  background-color: #333;
+}
+
+.gauge-bar .indicator {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 14px;
+  background-color: #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(255,255,255,0.8);
+  z-index: 2;
+}
+
+/* Specific gauge bar colors */
+.co2-bar {
+  background: linear-gradient(to right, #4caf50 30%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
+}
+.voc-bar {
+  background: linear-gradient(to right, #4caf50 30%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
+}
+.temp-bar {
+  background: linear-gradient(to right, #2196f3 20%, #03a9f4 40%, #e0e0e0 60%, #ff9800 80%, #f44336 100%);
+}
+.hum-bar {
+  background: linear-gradient(to right, #ff9800 20%, #ffeb3b 40%, #4caf50 60%, #03a9f4 80%, #2196f3 100%);
+}
+.pres-bar {
+  background: linear-gradient(to right, #9c27b0 20%, #ab47bc 40%, #ba68c8 60%, #ce93d8 80%, #e1bee7 100%);
+}
+.uv-bar {
+  background: linear-gradient(to right, #4caf50 20%, #8bc34a 40%, #ffeb3b 60%, #ff9800 80%, #e91e63 100%);
+}
+
+/* Charts at the bottom of top panels */
+.chart-placeholder {
+  margin-top: 16px;
+  height: 80px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-bg-lines {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 0;
+}
+
+.chart-bg-lines div {
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.chart-line-svg {
+  width: 100%;
+  height: calc(100% - 20px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.chart-x-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #666;
+  border-top: 1px solid #333;
+  padding-top: 4px;
+  width: 100%;
+  margin-top: auto;
+  z-index: 2;
+}
+
+/* Decorators for gauge boundaries */
+.gauge-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 30%; /* Normal/Elevado boundary */
+  height: 8px;
+  width: 1px;
+  background-color: #000;
+}
+.gauge-bar::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  height: 8px;
+  width: 1px;
+  background-color: #000;
 }
