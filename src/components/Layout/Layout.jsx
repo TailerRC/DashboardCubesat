@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../Sidebar/Sidebar';
-import TopBar from '../TopBar/TopBar';
-import BottomBar from '../BottomBar/BottomBar';
+import Sidebar from './Sidebar';
+import TopBar from './TopBar';
+import BottomBar from './BottomBar';
 import './Layout.css';
 
 export default function Layout({ viewName = 'Vista General' }) {
