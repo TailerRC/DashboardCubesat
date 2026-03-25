@@ -1,0 +1,96 @@
+.topbar {
+  display: flex;
+  flex-direction: column;
+  background: #1a1d23;
+  border-bottom: 1px solid #2a2d35;
+}
+
+/* ── Telemetry Strip ── */
+.topbar-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 6px 20px;
+  background: #15171c;
+  border-bottom: 1px solid #2a2d35;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.telemetry-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.telemetry-label {
+  color: #8b8fa3;
+  font-weight: 500;
+}
+
+.telemetry-value {
+  font-weight: 700;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* ── Info Row ── */
+.topbar-info {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px 10px;
+  gap: 16px;
+}
+
+.topbar-info-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.station-label {
+  font-size: 10px;
+  color: #6b7280;
+  letter-spacing: 0.3px;
+  font-style: italic;
+}
+
+.view-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+
+.topbar-progress {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.progress-track {
+  width: 100%;
+  height: 3px;
+  background: #2a2d35;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 75%;
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.topbar-info-right {
+  min-width: 140px;
+  text-align: right;
+}
+
+.topbar-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+  font-family: 'Consolas', 'Courier New', monospace;
+}

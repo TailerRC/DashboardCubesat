@@ -1,0 +1,56 @@
+.bottombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  background: #1a1d23;
+  border-top: 1px solid #2a2d35;
+  font-size: 12px;
+  min-height: 32px;
+}
+
+.bottombar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.status-value {
+  color: #9ca3af;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.status-value.ok {
+  color: #4caf50;
+}
+
+.bottombar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.station-name {
+  color: #6b7280;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.bottombar-time {
+  color: #e0e0e0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-weight: 600;
+  font-size: 13px;
+}
