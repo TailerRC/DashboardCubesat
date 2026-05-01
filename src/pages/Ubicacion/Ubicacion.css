@@ -1,0 +1,245 @@
+.ubicacion-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.panel-header {
+  font-size: 14px;
+  font-weight: 500;
+  color: #a0aab5;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-orange { color: #ff9800; }
+.text-yellow { color: #ffeb3b; }
+.text-cyan { color: #03a9f4; }
+.text-green { color: #4caf50; }
+
+/* Top Section */
+.ubicacion-top-section {
+  display: flex;
+  gap: 16px;
+  flex: 1 1 50%;
+}
+
+.map-panel {
+  flex: 3;
+  background-color: #1a1e23;
+  border-radius: 6px;
+  border: 1px solid #2a3038;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.map-grid-bg {
+  flex: 1;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: #111418;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.radar-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+.radar-circle svg {
+  width: 24px;
+  height: 24px;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+.map-coordinates-label {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  font-family: monospace;
+  color: #fff;
+  font-size: 14px;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.map-footer {
+  display: flex;
+  flex-direction: column;
+}
+.map-title-label {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+.map-subtitle-label {
+  color: #88929c;
+  font-size: 12px;
+}
+
+/* GPS Data right panel */
+.gps-data-panel {
+  flex: 1;
+  background-color: #1a1e23;
+  border-radius: 6px;
+  border: 1px solid #2a3038;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.gps-table {
+  width: 100%;
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 2.2;
+}
+
+.landing-coords {
+  margin-top: auto;
+  background-color: rgba(76, 175, 80, 0.1);
+  border: 1px solid #4caf50;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+
+.landing-label {
+  color: #a0aab5;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.landing-value {
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* Bottom Section */
+.ubicacion-bottom-section {
+  display: flex;
+  gap: 16px;
+  flex: 1 1 35%;
+}
+
+.panel-card {
+  flex: 1;
+  background-color: #1a1e23;
+  border-radius: 6px;
+  border: 1px solid #2a3038;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-main-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.panel-main-value .value {
+  font-size: 42px;
+  font-weight: bold;
+  color: #fff;
+}
+.panel-main-value .unit {
+  font-size: 16px;
+  color: #a0aab5;
+}
+
+.chart-area {
+  flex: 1;
+  min-height: 60px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.graph-svg {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+}
+
+.panel-footer-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.panel-footer-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-label {
+  color: #a0aab5;
+  font-size: 10px;
+}
+.stat-value {
+  color: #e0e0e0;
+  font-weight: bold;
+}
+
+/* Signal Bars */
+.signal-bars-area {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.signal-bar {
+  flex: 1;
+  background-color: #333;
+  border-radius: 4px 4px 0 0;
+  min-height: 10px;
+}
+
+/* Heights based on signal strength logic */
+.bar-1 { height: 15%; }
+.bar-2 { height: 25%; }
+.bar-3 { height: 35%; }
+.bar-4 { height: 45%; }
+.bar-5 { height: 55%; }
+.bar-6 { height: 65%; }
+.bar-7 { height: 75%; }
+.bar-8 { height: 85%; }
+.bar-9 { height: 95%; }
+.bar-10 { height: 100%; }
+
+.signal-bar.active {
+  background-color: #8bc34a;
+}

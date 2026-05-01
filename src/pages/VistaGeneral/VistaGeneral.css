@@ -1,0 +1,164 @@
+.vista-general {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Security Status ── */
+.security-status {
+  background: #1a1d23;
+  border: 1px solid #2a2d35;
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b8fa3;
+  letter-spacing: 1px;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.security-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 8px;
+}
+
+.security-banner--ok {
+  background: linear-gradient(135deg, #2e7d32, #4caf50);
+}
+
+.security-banner--warning {
+  background: linear-gradient(135deg, #e65100, #ff9800);
+}
+
+.security-banner--danger {
+  background: linear-gradient(135deg, #b71c1c, #f44336);
+}
+
+.security-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.security-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.security-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.security-label {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.security-detail {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+/* ── Data Cards ── */
+.data-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.data-card {
+  background: #1a1d23;
+  border: 1px solid #2a2d35;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.data-card:hover {
+  border-color: #3a3d45;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.card-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #e0e0e0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  line-height: 1;
+}
+
+.card-value--text {
+  font-size: 24px;
+  font-family: inherit;
+  letter-spacing: 1px;
+}
+
+.card-unit {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.card-label {
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .data-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .data-cards {
+    grid-template-columns: 1fr;
+  }
+}
