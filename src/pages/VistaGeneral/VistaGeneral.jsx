@@ -1,6 +1,7 @@
 import './VistaGeneral.css';
+import { useMqtt } from '../../hooks/useMqtt';
 
-const cards = [
+const getCards = (mqttData) => [
   {
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="#f9a825" strokeWidth="2">
@@ -67,7 +68,8 @@ const cards = [
         <line x1="23" y1="10" x2="23" y2="14" />
       </svg>
     ),
-    value: '12.46',
+    // ✅ Esta carta usa el dato real del potenciómetro via MQTT
+    value: mqttData ? mqttData.voltaje.toFixed(2) : '---',
     unit: 'V',
     label: 'VOLTAJE',
     color: '#66bb6a',
@@ -100,9 +102,28 @@ const cards = [
 ];
 
 export default function VistaGeneral() {
+  const { ultimo, conectado } = useMqtt();
+  const cards = getCards(ultimo);
+
   return (
     <div className="vista-general">
-      {/* Security Status */}
+
+      #Indicador de conexión MQTT
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '8px',
+        fontSize: '12px',
+        color: conectado ? '#66bb6a' : '#ef5350'
+      }}>
+        <span style={{ fontSize: '10px' }}>{conectado ? '●' : '○'}</span>
+        {conectado ? 'MQTT CONECTADO' : 'MQTT DESCONECTADO'}
+      </div>
+
+      #Security Status
+
       <section className="security-status">
         <h3 className="section-title">ESTADO AMBIENTAL DE SEGURIDAD</h3>
         <div className="security-banner security-banner--ok">
@@ -118,7 +139,6 @@ export default function VistaGeneral() {
         </div>
       </section>
 
-      {/* Data Cards */}
       <section className="data-cards">
         {cards.map((card, i) => (
           <div key={i} className="data-card">
