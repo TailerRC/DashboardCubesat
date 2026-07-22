@@ -31,30 +31,32 @@
 
 .com-stat-card {
   background-color: #1a1e23;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #2a3038;
   border-radius: 6px;
-  padding: 20px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
+  min-height: 90px;
 }
 
 .com-stat-title {
-  font-size: 12px;
+  font-size: 11px;
   color: #e0e0e0;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-transform: uppercase;
 }
 
 .com-stat-value {
-  font-size: 40px;
+  font-size: 30px;
   font-weight: bold;
-  margin: 10px 0;
+  margin: 4px 0;
+  line-height: 1.1;
 }
 .unit-small {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: normal;
 }
 
@@ -64,7 +66,7 @@
 .yellow-text { color: #ffeb3b; }
 
 .com-stat-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: #a0aab5;
 }
 
@@ -72,7 +74,7 @@
 .com-middle-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 12px;
 }
 
 /* Signal Panel */
@@ -81,10 +83,10 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 .signal-header h2 {
-  font-size: 20px;
+  font-size: 18px;
   color: #fff;
   margin: 0;
 }
@@ -92,14 +94,14 @@
 .signal-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 20px;
+  gap: 10px;
+  padding: 0 10px;
 }
 
 .signal-row {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
+  font-size: 13px;
 }
 .signal-row span { color: #a0aab5; }
 .signal-row strong { color: #fff; }
@@ -109,12 +111,12 @@
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .pkt-block {
-  width: 12px;
-  height: 16px;
+  width: 10px;
+  height: 14px;
 }
 .pkt-ok { background-color: #4caf50; }
 .pkt-error { background-color: #f44336; }
@@ -122,9 +124,9 @@
 .pkt-legend {
   display: flex;
   gap: 16px;
-  font-size: 12px;
+  font-size: 11px;
   color: #fff;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 .legend-item {
   display: flex;

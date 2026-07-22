@@ -1,178 +1,283 @@
+/* ─── Ambiental — Grid with Charts ────────────────────────────── */
 .ambiental-view {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  height: 100%;
+  gap: 14px;
+  min-height: min-content;
+  padding-bottom: 8px;
 }
 
+/* Security status banner */
+.security-status {
+  background: #1a1e23;
+  border: 1px solid #2a3038;
+  border-radius: 8px;
+  padding: 12px 18px;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 1.2px;
+  margin: 0;
+  text-transform: uppercase;
+}
+.packet-id-badge {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #6b7280;
+}
+
+.security-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  margin-top: 6px;
+  transition: background 0.3s ease;
+}
+.security-banner--ok      { background: linear-gradient(135deg, #1b5e20, #4caf50); }
+.security-banner--warning { background: linear-gradient(135deg, #e65100, #ff9800); }
+.security-banner--danger  { background: linear-gradient(135deg, #b71c1c, #f44336); }
+.security-banner--info    { background: linear-gradient(135deg, #16263d, #1e3a60); border: 1px solid #2d5584; }
+
+.security-icon {
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.security-text   { display: flex; flex-direction: column; gap: 1px; }
+.security-label  { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+.security-detail { font-size: 10px; color: rgba(255,255,255,0.85); font-weight: 500; letter-spacing: 0.5px; }
+
+/* ─── 2-column grid ─── */
 .ambiental-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  flex: 1;
+  gap: 14px;
 }
 
+/* ─── Telemetry Card with Charts ─── */
 .ambiental-card {
   background-color: #1a1e23;
-  border-radius: 6px;
-  padding: 24px;
+  border-radius: 10px;
+  padding: 14px 16px 12px;
   border: 1px solid #2a3038;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  /* Card has exact height to contain header, value, gauge, chart and age footer */
+  height: 350px;
+  position: relative;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+  overflow: hidden;
 }
 
-.ambiental-card .card-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #a0aab5;
-  margin: 0 0 16px 0;
+/* Hover effect */
+.ambiental-card:hover {
+  border-color: var(--card-color, #4caf50);
+  box-shadow: 0 0 0 1px var(--card-color, #4caf50),
+              0 8px 32px -8px color-mix(in srgb, var(--card-color, #4caf50) 40%, transparent);
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+/* Top shimmer bar on hover */
+.ambiental-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--card-color, #4caf50), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: 10px 10px 0 0;
+}
+.ambiental-card:hover::before {
+  opacity: 1;
+}
+
+/* Card Header Row */
+.card-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.card-icon {
+  font-size: 13px;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--card-color, #4caf50) 15%, transparent);
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.ambiental-card:hover .card-icon {
+  background: color-mix(in srgb, var(--card-color, #4caf50) 25%, transparent);
+}
+
+.card-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  flex: 1;
 }
 
+/* Live indicator dot */
+.card-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background-color: #66bb6a;
+  box-shadow: 0 0 6px #66bb6a;
+  flex-shrink: 0;
+}
+.card-live-dot--stale {
+  background-color: #ff9800;
+  box-shadow: 0 0 6px #ff9800;
+  animation: blink-stale 1s infinite alternate;
+}
+@keyframes blink-stale {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+/* ─── Main Value ─── */
 .card-main-value {
-  margin-bottom: 24px;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 5px;
+  flex-shrink: 0;
 }
-
 .card-main-value .value {
-  font-size: 48px;
-  font-weight: 600;
-  color: #ffffff;
+  font-size: 32px;
+  font-weight: 700;
   line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -1px;
 }
-
 .card-main-value .unit {
-  font-size: 16px;
-  color: #a0aab5;
+  font-size: 13px;
+  color: #6b7280;
   font-weight: 500;
 }
+.value-placeholder {
+  font-size: 32px;
+  font-weight: 700;
+  color: #4b5563;
+  font-family: 'JetBrains Mono', monospace;
+}
 
-/* Gauge container */
+/* ─── Gauge Bar ─── */
 .gauge-container {
-  margin-top: auto;
-  margin-bottom: 12px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
 }
-
-.multi-section-gauge {
-  margin-bottom: 0px;
-}
-
 .gauge-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: #88929c;
-  margin-bottom: 8px;
+  font-size: 8.5px;
+  color: #6b7280;
+  margin-bottom: 4px;
   text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.3;
 }
-
 .gauge-labels span {
   flex: 1;
-  position: relative;
 }
-
 .gauge-bar {
-  height: 6px;
+  height: 5px;
   position: relative;
-  background-color: #333;
+  border-radius: 3px;
+  overflow: visible;
 }
-
 .gauge-bar .indicator {
   position: absolute;
-  top: -4px;
-  width: 4px;
-  height: 14px;
+  top: -5px;
+  width: 3px; height: 14px;
   background-color: #fff;
   border-radius: 2px;
-  box-shadow: 0 0 4px rgba(255,255,255,0.8);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
   z-index: 2;
+  transition: left 0.5s ease;
 }
 
-/* Specific gauge bar colors */
+/* Gauge colors */
 .co2-bar {
-  background: linear-gradient(to right, #4caf50 30%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
+  background: linear-gradient(to right, #4caf50 25%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
 }
 .voc-bar {
-  background: linear-gradient(to right, #4caf50 30%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
+  background: linear-gradient(to right, #4caf50 25%, #8bc34a 45%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
 }
 .temp-bar {
-  background: linear-gradient(to right, #2196f3 20%, #03a9f4 40%, #e0e0e0 60%, #ff9800 80%, #f44336 100%);
+  background: linear-gradient(to right, #1565c0 0%, #42a5f5 30%, #e3f2fd 55%, #ff9800 75%, #f44336 100%);
 }
 .hum-bar {
-  background: linear-gradient(to right, #ff9800 20%, #ffeb3b 40%, #4caf50 60%, #03a9f4 80%, #2196f3 100%);
+  background: linear-gradient(to right, #ff9800 15%, #ffeb3b 35%, #4caf50 55%, #03a9f4 75%, #1565c0 100%);
 }
 .pres-bar {
-  background: linear-gradient(to right, #9c27b0 20%, #ab47bc 40%, #ba68c8 60%, #ce93d8 80%, #e1bee7 100%);
+  background: linear-gradient(to right, #7b1fa2 10%, #ab47bc 35%, #ce93d8 60%, #e1bee7 85%, #fce4ec 100%);
 }
 .uv-bar {
-  background: linear-gradient(to right, #4caf50 20%, #8bc34a 40%, #ffeb3b 60%, #ff9800 80%, #e91e63 100%);
+  background: linear-gradient(to right, #4caf50 15%, #8bc34a 35%, #ffeb3b 55%, #ff9800 75%, #e91e63 100%);
 }
 
-/* Charts at the bottom of top panels */
-.chart-placeholder {
-  margin-top: 16px;
-  height: 80px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-bg-lines {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  z-index: 0;
-}
-
-.chart-bg-lines div {
-  width: 100%;
-  height: 1px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-}
-
-.chart-line-svg {
-  width: 100%;
-  height: calc(100% - 20px);
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-
-.chart-x-axis {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: #666;
-  border-top: 1px solid #333;
-  padding-top: 4px;
-  width: 100%;
-  margin-top: auto;
-  z-index: 2;
-}
-
-/* Decorators for gauge boundaries */
 .gauge-bar::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 30%; /* Normal/Elevado boundary */
-  height: 8px;
-  width: 1px;
-  background-color: #000;
+  bottom: 0; left: 30%;
+  height: 7px; width: 1px;
+  background-color: rgba(0, 0, 0, 0.4);
 }
 .gauge-bar::before {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 50%;
-  height: 8px;
-  width: 1px;
-  background-color: #000;
+  bottom: 0; left: 50%;
+  height: 7px; width: 1px;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Chart wrapper ─── */
+.chart-area-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ─── Card Footer ─── */
+.card-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  border-top: 1px solid #22272e;
+  padding-top: 8px;
+  margin-top: 2px;
+}
+.elapsed-time {
+  color: #6b7280;
+}
+
+/* Stale/Lost packet state style */
+.ambiental-card.card-stale {
+  border-color: rgba(230, 81, 0, 0.4);
+  background-color: #1c1d22;
+}
+.stale-badge {
+  color: #ff7043;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.5px;
 }

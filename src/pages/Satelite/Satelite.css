@@ -1,46 +1,52 @@
+/* ─── Satelite View ───────────────────────────────── */
 .satelite-view {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   height: 100%;
 }
 
-.satelite-top-grid, .satelite-bottom-grid {
+.satelite-top-grid,
+.satelite-bottom-grid {
   display: flex;
-  gap: 16px;
+  gap: 14px;
 }
-
-.satelite-top-grid { flex: 1; }
-.satelite-bottom-grid { flex: 1; min-height: 250px; }
+.satelite-top-grid  { flex: 1 1 55%; min-height: 0; }
+.satelite-bottom-grid { flex: 1 1 38%; min-height: 0; }
 
 .satelite-card {
   flex: 1;
   background-color: #1a1e23;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #2a3038;
-  padding: 16px;
+  padding: 14px 16px 12px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  transition: border-color 0.2s;
 }
+.satelite-card:hover { border-color: #3a4050; }
 
+/* ─── Card Header ─── */
 .card-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #fff;
-  margin: 0 0 16px 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 .text-center { text-align: center; }
 
-/* Top Charts / Gauges */
+/* ─── Circle Gauge ─── */
 .circle-gauge-container {
   display: flex;
   justify-content: center;
-  margin-bottom: 24px;
 }
-
 .circle-gauge {
-  width: 140px;
-  height: 140px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -48,155 +54,208 @@
   justify-content: center;
   position: relative;
 }
-
 .circle-gauge::before {
   content: '';
   position: absolute;
-  top: 8px; left: 8px; right: 8px; bottom: 8px;
+  top: 7px; left: 7px; right: 7px; bottom: 7px;
   border-radius: 50%;
   background-color: #1a1e23;
   z-index: 1;
 }
-
-.circle-gauge span {
-  position: relative;
-  z-index: 2;
-}
+.circle-gauge span { position: relative; z-index: 2; }
 
 .circle-gauge .value {
-  font-size: 32px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 700;
   color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
 }
-
 .circle-gauge .unit {
-  font-size: 14px;
-  color: #a0aab5;
+  font-size: 10px;
+  color: #6b7280;
 }
 
-.red-gauge { background: conic-gradient(#f44336 60%, #333 60%); }
-.blue-gauge { background: conic-gradient(#2196f3 75%, #333 75%); }
-.purple-gauge { background: conic-gradient(#9c27b0 45%, #333 45%); }
+.red-gauge    { background: conic-gradient(#ef5350 60%, #2a3038 60%); }
+.blue-gauge   { background: conic-gradient(#42a5f5 75%, #2a3038 75%); }
+.purple-gauge { background: conic-gradient(#ab47bc 45%, #2a3038 45%); }
 
+/* Gauge percent badge */
+.gauge-pct {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111318;
+  border: 1px solid #2a3038;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #9ca3af;
+  z-index: 3;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── Mini Stats ─── */
 .mini-stats {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 16px;
-  padding: 0 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 2px 0;
 }
-
 .mini-stats > div {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  gap: 2px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+.stat-lbl {
+  color: #6b7280;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+.stat-val {
+  color: #e5e7eb;
+  font-weight: 700;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.stat-lbl { color: #88929c; }
-.stat-val { color: #e0e0e0; font-weight: bold; }
-.text-red { color: #f44336; }
+/* ─── Colors ─── */
+.text-red    { color: #ef5350; }
 .text-yellow { color: #ffeb3b; }
-.text-blue { color: #2196f3; }
-.text-purple { color: #9c27b0; }
-.text-green { color: #4caf50; }
+.text-blue   { color: #42a5f5; }
+.text-purple { color: #ba68c8; }
+.text-green  { color: #66bb6a; }
 
 .mt-auto { margin-top: auto; }
 
-.chart-area {
-  height: 50px;
-  position: relative;
-  border-bottom: 1px solid #333;
+/* ─── Chart with axes ─── */
+.sat-chart-wrap {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
 }
-
-.graph-svg {
+.sat-chart-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 36px;
+  flex-shrink: 0;
+  padding-bottom: 14px;
+}
+.sat-chart-y span {
+  font-size: 8px;
+  color: #6b7280;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+.sat-chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.sat-graph-svg {
+  height: 58px;
   width: 100%;
-  height: 100%;
-  position: absolute;
-  bottom: 0;
-  left: 0;
+  display: block;
+  border-bottom: 1px solid #2a3038;
+}
+.sat-chart-x {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+  padding-top: 3px;
 }
 
-/* Acceleration sliders */
+/* ─── Acceleration sliders ─── */
 .accel-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 16px 24px;
+  gap: 12px;
+  flex: 1;
+  justify-content: center;
+  padding: 4px 4px;
 }
-
 .accel-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
-
 .accel-label {
-  font-weight: bold;
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 14px;
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
 }
-
 .accel-gauge-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  position: relative;
+  gap: 4px;
 }
-
 .accel-status-text {
-  text-align: center;
-  font-size: 12px;
-  color: #fff;
-  margin-bottom: 8px;
+  text-align: right;
+  font-size: 11px;
+  color: #e5e7eb;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
 }
-
 .accel-slider-track {
-  height: 8px;
-  background-color: #333;
-  border-radius: 4px;
+  height: 5px;
+  background: linear-gradient(to right, #1e3a5f 0%, #2a3038 49%, #3a2020 50%, #3a2020 100%);
+  border-radius: 3px;
   position: relative;
-  margin-bottom: 8px;
 }
-
 .accel-indicator {
-  width: 12px;
-  height: 12px;
+  width: 10px; height: 10px;
   border-radius: 50%;
   position: absolute;
-  top: -2px;
+  top: -2.5px;
   transform: translateX(-50%);
-  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  box-shadow: 0 0 6px rgba(0,0,0,0.6);
+  border: 1.5px solid rgba(255,255,255,0.6);
 }
-
 .accel-ticks {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: #88929c;
+  font-size: 8.5px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* System Status List */
+/* ─── System Status ─── */
 .system-status-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 24px;
+  gap: 0;
+  flex: 1;
 }
-
 .system-status-item {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px dashed #333;
-  padding-bottom: 8px;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-
+.system-status-item:last-child { border-bottom: none; }
 .sys-label {
-  color: #a0aab5;
-  font-size: 14px;
+  color: #6b7280;
+  font-size: 12px;
 }
-
 .sys-value {
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
 }

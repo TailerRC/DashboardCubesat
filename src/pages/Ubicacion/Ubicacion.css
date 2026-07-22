@@ -1,245 +1,333 @@
+/* ─── Ubicacion View ───────────────────────────────── */
 .ubicacion-view {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   height: 100%;
 }
 
-.panel-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #a0aab5;
-  margin: 0 0 16px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
+/* ─── Utility ─── */
 .text-center { text-align: center; }
-.text-right { text-align: right; }
 .text-orange { color: #ff9800; }
 .text-yellow { color: #ffeb3b; }
-.text-cyan { color: #03a9f4; }
-.text-green { color: #4caf50; }
+.text-cyan   { color: #03a9f4; }
+.text-green  { color: #4caf50; }
+.mono        { font-family: 'JetBrains Mono', monospace; }
 
-/* Top Section */
+/* ─── Top Section ─── */
 .ubicacion-top-section {
   display: flex;
-  gap: 16px;
-  flex: 1 1 50%;
+  gap: 14px;
+  flex: 1 1 55%;
+  min-height: 0;
 }
 
+/* Map Panel */
 .map-panel {
   flex: 3;
   background-color: #1a1e23;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #2a3038;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 14px;
+  gap: 10px;
 }
 
 .map-grid-bg {
   flex: 1;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-color: #111418;
-  border-radius: 4px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-color: #0d1014;
+  border-radius: 6px;
   position: relative;
   overflow: hidden;
-  margin-bottom: 12px;
+  min-height: 0;
+}
+
+.trajectory-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
 }
 
 .radar-circle {
-  width: 60px;
-  height: 60px;
+  width: 56px; height: 56px;
   border-radius: 50%;
-  background-color: rgba(76, 175, 80, 0.2);
-  border: 1px solid rgba(76, 175, 80, 0.5);
+  background-color: rgba(76, 175, 80, 0.15);
+  border: 1.5px solid rgba(76, 175, 80, 0.5);
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse 2s infinite;
+  display: flex; align-items: center; justify-content: center;
+  animation: pulse 2.5s infinite;
 }
-
-.radar-circle svg {
-  width: 24px;
-  height: 24px;
-}
-
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-  70% { box-shadow: 0 0 0 15px rgba(76, 175, 80, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.5); }
+  70%  { box-shadow: 0 0 0 18px rgba(76,175,80,0); }
+  100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+}
+
+.map-lat-label, .map-lon-label {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  padding: 2px 4px;
 }
 
 .map-coordinates-label {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
-  font-family: monospace;
-  color: #fff;
-  font-size: 14px;
-  background: rgba(0,0,0,0.5);
-  padding: 4px 8px;
+  bottom: 10px; right: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0f7fa;
+  font-size: 12px;
+  background: rgba(0,0,0,0.6);
+  padding: 4px 10px;
   border-radius: 4px;
+  border: 1px solid rgba(79,195,247,0.25);
+  letter-spacing: 0.5px;
 }
 
 .map-footer {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
 }
 .map-title-label {
-  color: #fff;
+  color: #e0e0e0;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
 }
 .map-subtitle-label {
-  color: #88929c;
-  font-size: 12px;
+  color: #6b7280;
+  font-size: 11px;
 }
 
-/* GPS Data right panel */
+/* GPS Data Panel */
 .gps-data-panel {
   flex: 1;
   background-color: #1a1e23;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #2a3038;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.gps-panel-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
 }
 
 .gps-table {
   width: 100%;
-  color: #e0e0e0;
-  font-size: 14px;
-  line-height: 2.2;
+  border-collapse: collapse;
+  flex: 1;
 }
+.gps-table td {
+  padding: 5px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #9ca3af;
+  vertical-align: middle;
+}
+.gps-table td:first-child { color: #6b7280; font-size: 11px; }
+.gps-val { text-align: right; color: #e5e7eb !important; font-family: 'JetBrains Mono', monospace; font-size: 11.5px !important; }
+.gps-hi  { color: #ff9800 !important; font-weight: 700; }
+.gps-ok  { color: #4caf50 !important; }
 
 .landing-coords {
-  margin-top: auto;
-  background-color: rgba(76, 175, 80, 0.1);
-  border: 1px solid #4caf50;
-  border-radius: 6px;
-  padding: 16px;
+  background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(76,175,80,0.05));
+  border: 1px solid rgba(76,175,80,0.3);
+  border-radius: 8px;
+  padding: 12px;
   text-align: center;
 }
-
 .landing-label {
-  color: #a0aab5;
-  font-size: 12px;
-  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  font-weight: 600;
 }
-
 .landing-value {
   color: #fff;
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
 }
 
-/* Bottom Section */
+/* ─── Bottom Section ─── */
 .ubicacion-bottom-section {
   display: flex;
-  gap: 16px;
-  flex: 1 1 35%;
+  gap: 14px;
+  flex: 1 1 38%;
+  min-height: 0;
 }
 
 .panel-card {
   flex: 1;
   background-color: #1a1e23;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #2a3038;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  transition: border-color 0.2s;
+}
+.panel-card:hover { border-color: #3a4050; }
+
+.ubi-panel-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .panel-main-value {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  margin-bottom: 12px;
 }
-.panel-main-value .value {
-  font-size: 42px;
-  font-weight: bold;
+.big-value {
+  font-size: 36px;
+  font-weight: 700;
   color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
 }
-.panel-main-value .unit {
-  font-size: 16px;
-  color: #a0aab5;
+.big-unit {
+  font-size: 15px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
-.chart-area {
+/* Chart axes wrapper */
+.chart-axes-wrap {
+  display: flex;
+  gap: 4px;
   flex: 1;
-  min-height: 60px;
-  border-bottom: 1px solid #333;
-  margin-bottom: 12px;
-  position: relative;
+  min-height: 0;
 }
 
-.graph-svg {
+.chart-y-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 34px;
+  flex-shrink: 0;
+  padding-bottom: 16px;
+}
+.chart-y-side span {
+  font-size: 8px;
+  color: #6b7280;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+
+.chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ubi-svg {
+  flex: 1;
   width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0; left: 0;
+  min-height: 0;
+  display: block;
 }
 
+.chart-x-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid #2a3038;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+/* Stats footer */
 .panel-footer-stats {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  flex-shrink: 0;
 }
 .panel-footer-stats > div {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 .stat-label {
-  color: #a0aab5;
-  font-size: 10px;
+  color: #6b7280;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
 }
 .stat-value {
-  color: #e0e0e0;
-  font-weight: bold;
+  color: #e5e7eb;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Signal Bars */
 .signal-bars-area {
-  flex: 1;
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #333;
+  gap: 5px;
+  flex: 1;
+  min-height: 40px;
+  max-height: 80px;
+  border-bottom: 1px solid #2a3038;
+  padding-bottom: 0;
 }
-
 .signal-bar {
   flex: 1;
-  background-color: #333;
-  border-radius: 4px 4px 0 0;
-  min-height: 10px;
+  background-color: #2a3038;
+  border-radius: 3px 3px 0 0;
+  min-height: 8px;
+  transition: background-color 0.3s;
 }
-
-/* Heights based on signal strength logic */
-.bar-1 { height: 15%; }
-.bar-2 { height: 25%; }
-.bar-3 { height: 35%; }
-.bar-4 { height: 45%; }
-.bar-5 { height: 55%; }
-.bar-6 { height: 65%; }
-.bar-7 { height: 75%; }
-.bar-8 { height: 85%; }
-.bar-9 { height: 95%; }
+.bar-1  { height: 10%; }
+.bar-2  { height: 20%; }
+.bar-3  { height: 30%; }
+.bar-4  { height: 40%; }
+.bar-5  { height: 50%; }
+.bar-6  { height: 60%; }
+.bar-7  { height: 70%; }
+.bar-8  { height: 80%; }
+.bar-9  { height: 90%; }
 .bar-10 { height: 100%; }
+.signal-bar.active { background-color: #66bb6a; }
 
-.signal-bar.active {
-  background-color: #8bc34a;
+.signal-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #6b7280;
+  padding-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
 }

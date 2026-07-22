@@ -1,107 +1,119 @@
+/* ─── Mision View ─────────────────────────────────── */
 .mision-view {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr;
-  gap: 24px;
+  grid-template-rows: 1fr auto;
+  gap: 14px;
   height: 100%;
 }
 
 .panel-card {
   background-color: #1a1e23;
   border: 1px solid #2a3038;
-  border-radius: 6px;
-  padding: 20px;
+  border-radius: 8px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.2s;
 }
+.panel-card:hover { border-color: #3a4050; }
 
 .panel-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #e0e0e0;
-  margin: 0 0 16px 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0 0 14px 0;
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* Fases */
+/* ─── Fases (left top) ─── */
 .mision-fases {
   grid-column: 1;
   grid-row: 1;
 }
 
-.fase-header {
-  margin-bottom: 24px;
-}
+.fase-header { margin-bottom: 16px; }
 .fase-subtitle {
-  font-size: 12px;
-  color: #a0aab5;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 .fase-title {
-  font-size: 32px;
-  color: #00bcd4;
-  margin: 4px 0 0 0;
-  font-weight: bold;
+  font-size: 28px;
+  color: #4fc3f7;
+  margin: 4px 0 0;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .fases-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
 }
 
 .fase-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 20px;
-  border-radius: 6px;
-  border: 1px solid #3a424e;
-  background-color: #21262d;
+  gap: 14px;
+  padding: 11px 16px;
+  border-radius: 7px;
+  border: 1px solid;
+  transition: opacity 0.2s;
 }
 
 .fase-item.fase-completed {
-  background-color: #aed581; /* Verde claro */
-  border-color: #8bc34a;
-  color: #1b5e20;
+  background: linear-gradient(90deg, rgba(76,175,80,0.18), rgba(76,175,80,0.06));
+  border-color: rgba(76,175,80,0.35);
+  color: #a5d6a7;
 }
-.fase-item.fase-completed .fase-icon { border-color: #1b5e20; }
-.fase-item.fase-completed .fase-icon-inner { background-color: #1b5e20; }
+.fase-item.fase-completed .fase-icon { border-color: #4caf50; }
+.fase-item.fase-completed .fase-icon-inner { background-color: #4caf50; }
 
 .fase-item.fase-active {
-  background-color: #64b5f6; /* Azul claro */
-  border-color: #42a5f5;
-  color: #0d47a1;
+  background: linear-gradient(90deg, rgba(79,195,247,0.18), rgba(79,195,247,0.06));
+  border-color: rgba(79,195,247,0.45);
+  color: #e1f5fe;
 }
-.fase-item.fase-active .fase-icon { border-color: #0d47a1; }
-.fase-item.fase-active .fase-icon-inner { background-color: #0d47a1; }
+.fase-item.fase-active .fase-icon { border-color: #4fc3f7; animation: blink 1.5s infinite; }
+.fase-item.fase-active .fase-icon-inner { background-color: #4fc3f7; }
 
 .fase-item.fase-pending {
-  background-color: #9e9e9e;
-  border-color: #757575;
-  color: #ffffff;
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+  color: #4b5563;
+  opacity: 0.7;
 }
-.fase-item.fase-pending .fase-icon { border-color: #e0e0e0; }
+.fase-item.fase-pending .fase-icon { border-color: #4b5563; }
+
+@keyframes blink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79,195,247,0.6); }
+  50% { box-shadow: 0 0 0 6px rgba(79,195,247,0); }
+}
 
 .fase-icon {
-  width: 20px;
-  height: 20px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   border: 2px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
 .fase-icon-inner {
-  width: 10px;
-  height: 10px;
+  width: 9px; height: 9px;
   border-radius: 50%;
 }
 .fase-label {
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
-/* Aceleracion */
+/* ─── Aceleración (right top) ─── */
 .mision-aceleracion {
   grid-column: 2;
   grid-row: 1;
@@ -109,112 +121,142 @@
 
 .aceleracion-visualizer {
   position: relative;
-  width: 240px;
-  height: 240px;
-  margin: 20px auto;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 12px;
+  flex-shrink: 0;
 }
 
 .ax-label {
   position: absolute;
-  font-size: 12px;
-  color: #e0e0e0;
+  font-size: 10px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
 }
-.ax-top { top: -10px; left: 50%; transform: translateX(-50%); }
-.ax-bottom { bottom: -10px; left: 50%; transform: translateX(-50%); }
-.ax-left { left: -30px; top: 50%; transform: translateY(-50%); }
-.ax-right { right: -30px; top: 50%; transform: translateY(-50%); }
+.ax-top    { top: -14px;  left: 50%; transform: translateX(-50%); }
+.ax-bottom { bottom: -14px; left: 50%; transform: translateX(-50%); }
+.ax-left   { left: -28px; top: 50%; transform: translateY(-50%); }
+.ax-right  { right: -28px; top: 50%; transform: translateY(-50%); }
 
 .crosshair-container {
-  width: 100%;
-  height: 100%;
-  background-color: #2a3038;
-  border-radius: 12px;
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #151a20, #1e2530);
+  border-radius: 10px;
+  border: 1px solid #2a3038;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
-
 .crosshair-h {
   position: absolute;
-  width: 100%;
-  height: 2px;
-  background-color: #4fc3f7;
+  width: 100%; height: 1px;
+  background-color: rgba(79,195,247,0.35);
 }
 .crosshair-v {
   position: absolute;
-  width: 2px;
-  height: 100%;
-  background-color: #4fc3f7;
+  width: 1px; height: 100%;
+  background-color: rgba(79,195,247,0.35);
 }
 .crosshair-circle {
   position: absolute;
-  width: 120px;
-  height: 120px;
-  border: 2px solid #4fc3f7;
+  width: 110px; height: 110px;
+  border: 1px solid rgba(79,195,247,0.3);
   border-radius: 50%;
 }
 .crosshair-icon {
   position: absolute;
-  width: 24px;
-  height: 24px;
+  top: 55%;
+  left: 45%;
   z-index: 2;
 }
 
 .aceleracion-stats {
   display: flex;
   justify-content: space-around;
+  font-size: 12px;
+  color: #6b7280;
   margin-top: auto;
-  font-size: 13px;
-  color: #a0aab5;
+  padding-top: 10px;
+  border-top: 1px solid #2a3038;
 }
 .aceleracion-stats strong {
-  color: #fff;
-  margin-left: 5px;
+  color: #e5e7eb;
+  margin-left: 4px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* Perfil de Altitud */
+/* ─── Perfil de Altitud (full-width bottom) ─── */
 .mision-perfil {
   grid-column: 1 / 3;
   grid-row: 2;
+  min-height: 0;
+  max-height: 220px;
 }
 
-.chart-container {
+.perfil-chart-wrap {
   display: flex;
+  gap: 8px;
   flex: 1;
-  margin-top: 10px;
+  min-height: 0;
 }
 
-.y-axis {
+.perfil-y-axis {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding-right: 15px;
-  font-size: 11px;
-  color: #a0aab5;
-  width: 50px;
+  width: 44px;
+  flex-shrink: 0;
+  padding-bottom: 20px;
+}
+.perfil-y-axis span {
+  font-size: 9px;
+  color: #6b7280;
   text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
 }
 
-.chart-area {
+.perfil-chart-body {
   flex: 1;
-  position: relative;
-  background-color: #2a3038; /* dark grey matching mockup */
-  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.grid-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: #4a5460;
-}
-
-.chart-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
+.perfil-svg {
+  flex: 1;
   width: 100%;
-  height: 100%;
+  display: block;
+  min-height: 0;
+}
+
+.perfil-x-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid #2a3038;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+/* Legend */
+.perfil-legend {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+.legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  color: #9ca3af;
 }

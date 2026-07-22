@@ -40,9 +40,7 @@ export default function Comunicacion() {
         {/* Signal Stats */}
         <div className="panel-card signal-panel">
           <div className="signal-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" width="24" height="24">
-              <path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 6 0 016.95 0M12 20h.01" />
-            </svg>
+            <i className="fa-solid fa-tower-broadcast" style={{ color: '#fff', fontSize: '24px' }}></i>
             <h2>ENLACE ACTIVO</h2>
           </div>
           
