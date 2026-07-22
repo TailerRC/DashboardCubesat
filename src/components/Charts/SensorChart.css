@@ -91,39 +91,43 @@
   position: absolute;
   pointer-events: none;
   z-index: 50;
-  transform: translate(-50%, -110%);
-  background: rgba(15, 18, 24, 0.92);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 8px;
-  padding: 6px 10px;
-  backdrop-filter: blur(8px);
+  background: rgba(12, 15, 20, 0.9);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  padding: 3px 7px;
+  backdrop-filter: blur(6px);
   white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  min-width: 100px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   text-align: center;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.1s ease;
+  /* Positioned by JS — default anchor is above-center of point */
+  transform: translate(-50%, -115%);
 }
 .sensor-tooltip__value {
-  display: block;
-  font-size: 15px;
+  display: inline;
+  font-size: 11px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  line-height: 1.2;
+}
+.sensor-tooltip__sep {
+  display: inline;
+  font-size: 9px;
+  color: #444;
+  margin: 0 3px;
 }
 .sensor-tooltip__time {
-  display: block;
-  font-size: 9.5px;
+  display: inline;
+  font-size: 9px;
   color: #6b7280;
-  margin-top: 2px;
   font-family: 'JetBrains Mono', monospace;
 }
 .sensor-tooltip__arrow {
   position: absolute;
-  bottom: -5px;
+  bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
   width: 0; height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid rgba(255,255,255,0.12);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid rgba(255,255,255,0.1);
 }

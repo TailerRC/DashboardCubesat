@@ -76,30 +76,38 @@ export default function SensorChart({
   thresholdY = null,   // real value (e.g. 450 ppm) — draws dashed red line
 }) {
   const uid = useId().replace(/:/g, '');
-  const gradId   = `grad-${uid}`;
-  const clipId   = `clip-${uid}`;
+  const gradId = `grad-${uid}`;
+  const clipId = `clip-${uid}`;
 
-  const bodyRef  = useRef(null);
+  const bodyRef = useRef(null);
   const [hover, setHover] = useState(null); // { idx, x, y, value, tsAgo }
 
   // ── Auto-scale Y to actual data range + padding ──────────────────────────
-  // This ensures the line always fills the chart vertically (no dead space)
+  // This ensures the line always fills the chart vertically and includes the threshold
   const effectiveYMin = useMemo(() => {
     if (data.length === 0) return yMin;
     const dMin = Math.min(...data.map(d => d.value));
     const dMax = Math.max(...data.map(d => d.value));
-    const pad  = Math.max((dMax - dMin) * 0.25, (yMax - yMin) * 0.05);
-    return Math.max(yMin, dMin - pad);
-  }, [data, yMin, yMax]);
+    const pad = Math.max((dMax - dMin) * 0.25, (yMax - yMin) * 0.05);
+
+    let targetMin = dMin - pad;
+    if (thresholdY !== null && thresholdY < dMin) {
+      targetMin = Math.min(targetMin, thresholdY - pad * 0.5);
+    }
+    return Math.max(yMin, targetMin);
+  }, [data, yMin, yMax, thresholdY]);
 
   const effectiveYMax = useMemo(() => {
     if (data.length === 0) return yMax;
     const dMin = Math.min(...data.map(d => d.value));
     const dMax = Math.max(...data.map(d => d.value));
-    const pad  = Math.max((dMax - dMin) * 0.25, (yMax - yMin) * 0.05);
-    // If threshold is above data, include it in view
-    const topBound = thresholdY != null ? Math.min(yMax, thresholdY + pad * 0.5) : yMax;
-    return Math.min(topBound, dMax + pad);
+    const pad = Math.max((dMax - dMin) * 0.25, (yMax - yMin) * 0.05);
+
+    let targetMax = dMax + pad;
+    if (thresholdY !== null && thresholdY > dMax) {
+      targetMax = Math.max(targetMax, thresholdY + pad * 0.5);
+    }
+    return Math.min(yMax, targetMax);
   }, [data, yMax, yMin, thresholdY]);
 
   // ── Mouse tracking ──────────────────────────────────────────────────────
@@ -108,27 +116,27 @@ export default function SensorChart({
     const rect = bodyRef.current.getBoundingClientRect();
     const relX = e.clientX - rect.left;
     const frac = Math.max(0, Math.min(1, relX / rect.width));
-    const idx  = Math.round(frac * (data.length - 1));
-    const pt   = data[idx];
+    const idx = Math.round(frac * (data.length - 1));
+    const pt = data[idx];
     if (!pt) return;
 
     // Convert SVG coordinates back to pixel for tooltip positioning
     const svgX = idxToX(idx, data.length);
     const svgY = valToY(pt.value, effectiveYMin, effectiveYMax);
-    const pxX  = (svgX / SVG_W) * rect.width;
-    const pxY  = (svgY / SVG_H) * (rect.height);
+    const pxX = (svgX / SVG_W) * rect.width;
+    const pxY = (svgY / SVG_H) * (rect.height);
 
-    setHover({ idx, pxX, pxY, value: pt.value, tsAgo: pt.tsAgo });
+    setHover({ idx, pxX, pxY, pxYFrac: pxY / rect.height, value: pt.value, tsAgo: pt.tsAgo });
   }, [data, effectiveYMin, effectiveYMax]);
 
   const handleMouseLeave = useCallback(() => setHover(null), []);
 
   // ── Derived SVG data ────────────────────────────────────────────────────
-  const polyPoints    = buildPoints(data, effectiveYMin, effectiveYMax);
+  const polyPoints = buildPoints(data, effectiveYMin, effectiveYMax);
   const polygonPoints = buildPolygon(data, effectiveYMin, effectiveYMax);
-  const lastPt        = data[data.length - 1];
-  const lastX         = lastPt ? idxToX(data.length - 1, data.length) : 0;
-  const lastY         = lastPt ? valToY(lastPt.value, effectiveYMin, effectiveYMax) : SVG_H;
+  const lastPt = data[data.length - 1];
+  const lastX = lastPt ? idxToX(data.length - 1, data.length) : 0;
+  const lastY = lastPt ? valToY(lastPt.value, effectiveYMin, effectiveYMax) : SVG_H;
 
   const thresholdSvgY = thresholdY != null ? valToY(thresholdY, effectiveYMin, effectiveYMax) : null;
 
@@ -161,11 +169,11 @@ export default function SensorChart({
           >
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor={color} stopOpacity="0.35"/>
-                <stop offset="100%" stopColor={color} stopOpacity="0.03"/>
+                <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.03" />
               </linearGradient>
               <clipPath id={clipId}>
-                <rect x="0" y="0" width={SVG_W} height={SVG_H}/>
+                <rect x="0" y="0" width={SVG_W} height={SVG_H} />
               </clipPath>
             </defs>
 
@@ -190,7 +198,7 @@ export default function SensorChart({
             )}
 
             {/* Area gradient */}
-            <polygon points={polygonPoints} fill={`url(#${gradId})`} clipPath={`url(#${clipId})`}/>
+            <polygon points={polygonPoints} fill={`url(#${gradId})`} clipPath={`url(#${clipId})`} />
 
             {/* Main line */}
             <polyline
@@ -200,6 +208,7 @@ export default function SensorChart({
               strokeWidth="1.8"
               strokeLinejoin="round"
               strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
             />
 
             {/* Cursor guideline */}
@@ -215,9 +224,9 @@ export default function SensorChart({
 
             {/* Data dots */}
             {data.map((pt, i) => {
-              const cx  = idxToX(i, data.length);
-              const cy  = valToY(pt.value, effectiveYMin, effectiveYMax);
-              const isLast   = i === data.length - 1;
+              const cx = idxToX(i, data.length);
+              const cy = valToY(pt.value, effectiveYMin, effectiveYMax);
+              const isLast = i === data.length - 1;
               const isHovered = hover?.idx === i;
               const r = isHovered ? 4.5 : isLast ? 3 : 2.5;
               return (
@@ -246,23 +255,37 @@ export default function SensorChart({
             })}
           </svg>
 
-          {/* Floating tooltip */}
+          {/* Floating tooltip — flips below point when point is in top 35% of chart */}
           {hover && (
             <div
               className="sensor-tooltip"
               style={{
                 left: hover.pxX,
-                top: hover.pxY,
+                top: hover.pxYFrac < 0.35 ? hover.pxY + 12 : hover.pxY,
                 borderColor: color,
+                transform: hover.pxYFrac < 0.35
+                  ? 'translate(-50%, 0)'
+                  : 'translate(-50%, -115%)',
               }}
             >
               <span className="sensor-tooltip__value" style={{ color }}>
-                {hover.value} {unit}
+                {hover.value.toFixed ? hover.value.toFixed(decimals) : hover.value} {unit}
               </span>
+              <span className="sensor-tooltip__sep">·</span>
               <span className="sensor-tooltip__time">
-                {hover.tsAgo === 0 ? 'ahora' : `hace ${Math.round(hover.tsAgo)}s`}
+                {hover.tsAgo < 1 ? 'ahora' : `${Math.round(hover.tsAgo)}s`}
               </span>
-              <div className="sensor-tooltip__arrow" style={{ borderTopColor: color }}></div>
+              <div
+                className="sensor-tooltip__arrow"
+                style={{
+                  borderTopColor: hover.pxYFrac < 0.35 ? 'transparent' : color,
+                  borderBottomColor: hover.pxYFrac < 0.35 ? color : 'transparent',
+                  top: hover.pxYFrac < 0.35 ? '-4px' : 'auto',
+                  bottom: hover.pxYFrac < 0.35 ? 'auto' : '-4px',
+                  borderTop: hover.pxYFrac < 0.35 ? 'none' : `4px solid ${color}`,
+                  borderBottom: hover.pxYFrac < 0.35 ? `4px solid ${color}` : 'none',
+                }}
+              ></div>
             </div>
           )}
 

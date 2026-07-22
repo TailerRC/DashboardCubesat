@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './TopBar.css';
 
-export default function TopBar({ viewName = 'Vista General' }) {
+export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -52,7 +52,10 @@ export default function TopBar({ viewName = 'Vista General' }) {
         </div>
         <div className="topbar-progress">
           <div className="progress-track">
-            <div className="progress-fill"></div>
+            <div
+              className="progress-fill"
+              style={{ width: `${scrollPct}%` }}
+            ></div>
           </div>
         </div>
         <div className="topbar-info-right">

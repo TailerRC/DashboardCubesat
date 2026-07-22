@@ -3,7 +3,7 @@
 // Publishes to MqttService on topic 'cempai/cubesat/telemetry/ambiental' every 0.5s - 1.0s.
 // Includes 8% packet loss rate and 2% invalid CRC rate.
 
-import { MqttService } from '../services/mqttService';
+import { MqttService } from '../config/mqttConfig';
 
 // Target topic
 const TOPIC = 'cempai/cubesat/telemetry/ambiental';
@@ -12,9 +12,9 @@ export const SENSOR_CONFIGS = {
   co2: {
     label: 'CO₂',
     unit: 'ppm',
-    yMin: 360,
-    yMax: 480,
-    threshold: 440,
+    yMin: 400,
+    yMax: 5000,
+    threshold: 1000,
     decimals: 2,
     color: '#f9a825'
   },
@@ -23,34 +23,34 @@ export const SENSOR_CONFIGS = {
     unit: 'ppb',
     yMin: 0,
     yMax: 80,
-    threshold: 45,
+    threshold: 60,
     decimals: 1,
     color: '#00bcd4'
   },
   temp: {
     label: 'Temperatura',
     unit: '°C',
-    yMin: 10,
-    yMax: 40,
-    threshold: 29.5,
+    yMin: -10,
+    yMax: 60,
+    threshold: 40,
     decimals: 1,
     color: '#ff7043'
   },
   hum: {
     label: 'Humedad',
     unit: '%RH',
-    yMin: 20,
-    yMax: 90,
-    threshold: 68.0,
+    yMin: 0,
+    yMax: 100,
+    threshold: 85,
     decimals: 1,
     color: '#03a9f4'
   },
   pres: {
     label: 'Presión',
     unit: 'Pa',
-    yMin: 95000,
-    yMax: 102000,
-    threshold: 100600.0,
+    yMin: -200,
+    yMax: 200,
+    threshold: 45,
     decimals: 2,
     color: '#ab47bc'
   },
@@ -58,8 +58,8 @@ export const SENSOR_CONFIGS = {
     label: 'UV',
     unit: 'UV index',
     yMin: 0,
-    yMax: 10,
-    threshold: 5.5,
+    yMax: 15,
+    threshold: 7.5,
     decimals: 1,
     color: '#ff9800'
   }
@@ -74,14 +74,14 @@ export function getSensorValueAtTime(sensorKey, secondsElapsed) {
   switch (sensorKey) {
     case 'co2':
       if (cycleTime < 35) {
-        val = 405 + Math.sin(cycleTime * 0.1) * 8;
+        val = 450 + Math.sin(cycleTime * 0.1) * 30;
       } else if (cycleTime < 75) {
-        val = 445 + Math.sin((cycleTime - 35) * 0.08) * 8;
+        val = 950 + Math.sin((cycleTime - 35) * 0.08) * 50;
       } else if (cycleTime < 105) {
-        val = 465 + Math.sin((cycleTime - 75) * 0.1) * 5;
+        val = 3800 + Math.sin((cycleTime - 75) * 0.1) * 400;
       } else {
         const ratio = (120 - cycleTime) / 15;
-        val = 405 + ratio * (465 - 405);
+        val = 450 + ratio * (3800 - 450);
       }
       break;
 
@@ -89,66 +89,67 @@ export function getSensorValueAtTime(sensorKey, secondsElapsed) {
       if (cycleTime < 35) {
         val = 22 + Math.sin(cycleTime * 0.15) * 5;
       } else if (cycleTime < 55) {
-        val = 28;
+        val = 38;
       } else if (cycleTime < 75) {
-        val = 46.5 + Math.sin((cycleTime - 55) * 0.1) * 2;
+        val = 55.5 + Math.sin((cycleTime - 55) * 0.1) * 2;
       } else if (cycleTime < 105) {
-        val = 58 + Math.sin((cycleTime - 75) * 0.15) * 4;
+        val = 72 + Math.sin((cycleTime - 75) * 0.15) * 4;
       } else {
         const ratio = (120 - cycleTime) / 15;
-        val = 22 + ratio * (58 - 22);
+        val = 22 + ratio * (72 - 22);
       }
       break;
 
     case 'temp':
       if (cycleTime < 35) {
-        val = 24.5 + Math.sin(cycleTime * 0.08) * 1.5;
+        val = 20.5 + Math.sin(cycleTime * 0.08) * 1.5;
       } else if (cycleTime < 75) {
-        val = 27.5 + Math.sin((cycleTime - 35) * 0.05) * 1.2;
+        val = 32.5 + Math.sin((cycleTime - 35) * 0.05) * 1.2;
       } else if (cycleTime < 105) {
-        val = 31.8 + Math.sin((cycleTime - 75) * 0.1) * 1.5;
+        val = 51.8 + Math.sin((cycleTime - 75) * 0.1) * 3.5;
       } else {
         const ratio = (120 - cycleTime) / 15;
-        val = 24.5 + ratio * (31.8 - 24.5);
+        val = 20.5 + ratio * (51.8 - 20.5);
       }
       break;
 
     case 'hum':
       if (cycleTime < 35) {
-        val = 54 + Math.sin(cycleTime * 0.12) * 3;
+        val = 45 + Math.sin(cycleTime * 0.12) * 3;
       } else if (cycleTime < 75) {
-        val = 60;
+        val = 65;
       } else if (cycleTime < 105) {
-        val = 73.5 + Math.sin((cycleTime - 75) * 0.1) * 2.5;
+        val = 92.5 + Math.sin((cycleTime - 75) * 0.1) * 2.5;
       } else {
         const ratio = (120 - cycleTime) / 15;
-        val = 54 + ratio * (73.5 - 54);
+        val = 45 + ratio * (92.5 - 45);
       }
       break;
 
     case 'pres':
+      // Relative pressure in Pa, starting at 0 Pa and going negative as we climb
       if (cycleTime < 35) {
-        val = 100250 + Math.sin(cycleTime * 0.07) * 120;
+        val = 0 - (cycleTime * 0.5); // down to -17.5 Pa
       } else if (cycleTime < 75) {
-        val = 100820 + Math.sin((cycleTime - 35) * 0.09) * 150;
+        val = -17.5 - (cycleTime - 35) * 1.5; // down to -77.5 Pa
       } else if (cycleTime < 105) {
-        val = 101450 + Math.sin((cycleTime - 75) * 0.1) * 180;
+        val = -77.5 - (cycleTime - 75) * 2.0; // down to -137.5 Pa
       } else {
         const ratio = (120 - cycleTime) / 15;
-        val = 100250 + ratio * (101450 - 100250);
+        val = 0 - ratio * 137.5;
       }
       break;
 
     case 'uv':
       if (cycleTime < 35) {
-        val = 2.8 + Math.sin(cycleTime * 0.1) * 0.7;
+        val = 2.1 + Math.sin(cycleTime * 0.1) * 0.4;
       } else if (cycleTime < 75) {
-        val = 4.2;
+        val = 6.2;
       } else if (cycleTime < 105) {
-        val = 7.4 + Math.sin((cycleTime - 75) * 0.15) * 0.8;
+        val = 12.4 + Math.sin((cycleTime - 75) * 0.15) * 0.8;
       } else {
         const ratio = (120 - cycleTime) / 15;
-        val = 2.8 + ratio * (7.4 - 2.8);
+        val = 2.1 + ratio * (12.4 - 2.1);
       }
       break;
 
@@ -169,9 +170,6 @@ let uvVal = 1.80;
 let humVal = 55.40;
 let timerId = null;
 let simulatedTimeSecs = 0;
-
-// Constant alert threshold for pressure rate of change
-const PRESION_UMBRAL_ALERTA = 25.0; // Pa/s
 
 /**
  * Publishes a single telemetry packet to the mock MQTT broker.
@@ -214,22 +212,22 @@ function publishNextPacket() {
     }
 
     data = {
-      co2_ppm:       { v: co2Val, hace_seg: 0.0 },
-      gas_voc_ppb:   { v: vocVal, hace_seg: 0.0 },
-      temperatura_c: { v: tempVal, hace_seg: 0.0 },
-      radiacion_uv:  { v: uvVal, hace_seg: 0.0 },
-      humedad_pct:   { v: humVal, hace_seg: 0.0 },
-      presion_pa:    { v: lastPresion, hace_seg: 0.0, umbral_alerta: PRESION_UMBRAL_ALERTA }
+      co2_ppm:       { v: co2Val, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.co2.threshold },
+      gas_voc_ppb:   { v: vocVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.voc.threshold },
+      temperatura_c: { v: tempVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.temp.threshold },
+      radiacion_uv:  { v: uvVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.uv.threshold },
+      humedad_pct:   { v: humVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.hum.threshold },
+      presion_pa:    { v: lastPresion, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.pres.threshold }
     };
 
     // Calculate baseline warning state
     const outOfBounds = 
-      co2Val > 440 || 
-      vocVal > 45 || 
-      tempVal > 29.5 || 
-      humVal > 68.0 || 
-      uvVal > 5.5 ||
-      lastPresion > 100600.0;
+      co2Val > SENSOR_CONFIGS.co2.threshold || 
+      vocVal > SENSOR_CONFIGS.voc.threshold || 
+      tempVal > SENSOR_CONFIGS.temp.threshold || 
+      humVal > SENSOR_CONFIGS.hum.threshold || 
+      uvVal > SENSOR_CONFIGS.uv.threshold ||
+      Math.abs(lastPresion) > SENSOR_CONFIGS.pres.threshold;
 
     estadoAmbiental = outOfBounds ? 'PELIGRO' : 'SEGURO';
   } else {
