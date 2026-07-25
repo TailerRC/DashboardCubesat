@@ -243,12 +243,12 @@ export default function SensorChart({
                   <circle
                     cx={cx} cy={cy}
                     r={r}
-                    fill={isHovered || isLast ? color : '#1a1e23'}
+                    fill={isHovered || isLast ? color : 'rgba(255, 255, 255, 0.08)'}
                     stroke={color}
-                    strokeWidth={isHovered ? 1.5 : 1}
+                    strokeWidth={isHovered ? 1.8 : 1.2}
                     className={`sensor-dot${isHovered ? ' sensor-dot--hover' : ''}`}
                     style={{ '--dot-color': color }}
-                    opacity={isLast ? 1 : 0.75}
+                    opacity={isHovered || isLast ? 1 : 0.85}
                   />
                 </g>
               );

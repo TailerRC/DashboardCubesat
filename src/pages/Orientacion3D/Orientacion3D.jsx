@@ -46,7 +46,7 @@ export default function Orientacion3D() {
       <section className="controls-column">
         
         {/* Euler Angles */}
-        <div className="panel-card euler-panel">
+        <div className="panel-card euler-panel premium-card-hover" style={{ '--card-color': '#ef5350' }}>
           <h4 className="panel-header">Euler Angles</h4>
           
           <div className="euler-row">
@@ -75,7 +75,7 @@ export default function Orientacion3D() {
         </div>
 
         {/* Datos de Movimiento */}
-        <div className="panel-card movement-panel">
+        <div className="panel-card movement-panel premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
           <h4 className="panel-header">Datos de movimiento</h4>
           
           <div className="sensor-category">Acelerómetro:</div>
@@ -101,7 +101,7 @@ export default function Orientacion3D() {
         </div>
 
         {/* Manual Control */}
-        <div className="panel-card manual-panel">
+        <div className="panel-card manual-panel premium-card-hover" style={{ '--card-color': '#ffb74d' }}>
           <h4 className="panel-header">Manual Control</h4>
           
           <div className="slider-row">
@@ -137,7 +137,7 @@ export default function Orientacion3D() {
         </div>
 
         {/* Simulation Mode */}
-        <div className="panel-card mode-panel">
+        <div className="panel-card mode-panel premium-card-hover" style={{ '--card-color': '#66bb6a' }}>
           <h4 className="panel-header">Simulation Mode</h4>
           <div className="mode-buttons-row">
             <button 

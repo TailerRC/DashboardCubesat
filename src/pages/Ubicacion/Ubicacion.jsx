@@ -1,4 +1,5 @@
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import SensorChart from '../../components/Charts/SensorChart';
 import './Ubicacion.css';
 
 // Launch constants for geodetic reference
@@ -67,59 +68,18 @@ export default function Ubicacion() {
 
   const isStale = data.latitud.stale;
 
-  // Helper to build polyline and polygon points for real-time SVG charts
-  function buildChartPoints(history, yMin, yMax) {
-    if (!history || history.length === 0) return { line: '', area: '' };
-    const len = history.length;
-    
-    const lineCoords = history.map((pt, i) => {
-      // Map X from 0 to 97 to leave a 3% margin at the right edge
-      const x = (i / (len - 1)) * 97;
-      const valClamped = Math.max(yMin, Math.min(yMax, pt.value));
-      const y = 50 - ((valClamped - yMin) / (yMax - yMin)) * 50;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
-
-    const linePoints = lineCoords.join(' ');
-    const areaPoints = `0,50 ${linePoints} 97,50`;
-
-    return { line: linePoints, area: areaPoints };
-  }
-
-  // Helper to build dynamic Y axis labels
-  function buildYLabels(yMin, yMax, count = 5) {
-    const labels = [];
-    for (let i = count - 1; i >= 0; i--) {
-      const val = yMin + (i * (yMax - yMin)) / (count - 1);
-      labels.push(val);
-    }
-    return labels;
-  }
-
-  // 2. Dynamic Y-Axis scale and points for Altitud GPS
+  // 2. Dynamic Y-Axis scale for Altitud GPS
   const altHist = data.altitud_gps.history || [];
   const altVals = altHist.map(pt => pt.value);
   const maxAltInHist = altVals.length > 0 ? Math.max(...altVals) : 0;
   const altEffectiveMax = Math.max(200, maxAltInHist * 1.15); // min 200m
-
-  const altPoints = buildChartPoints(altHist, 0, altEffectiveMax);
-  const lastAltVal = altHist.length > 0 ? altHist[altHist.length - 1].value : 0;
-  const lastAltY = 50 - ((Math.max(0, Math.min(altEffectiveMax, lastAltVal)) - 0) / altEffectiveMax) * 50;
-
-  const altYLabels = buildYLabels(0, altEffectiveMax, 5);
   const maxAltLabel = Math.max(200.0, maxAltInHist).toFixed(1);
 
-  // 3. Dynamic Y-Axis scale and points for Distancia al Origen
+  // 3. Dynamic Y-Axis scale for Distancia al Origen
   const distHist = data.distancia_origen.history || [];
   const distVals = distHist.map(pt => pt.value);
   const maxDistInHist = distVals.length > 0 ? Math.max(...distVals) : 0;
   const distEffectiveMax = Math.max(200, maxDistInHist * 1.15); // min 200m
-
-  const distPoints = buildChartPoints(distHist, 0, distEffectiveMax);
-  const lastDistVal = distHist.length > 0 ? distHist[distHist.length - 1].value : 0;
-  const lastDistY = 50 - ((Math.max(0, Math.min(distEffectiveMax, lastDistVal)) - 0) / distEffectiveMax) * 50;
-
-  const distYLabels = buildYLabels(0, distEffectiveMax, 5);
   const maxDistLabel = Math.max(118.0, maxDistInHist).toFixed(1);
 
   // 4. GPS signal bars active count
@@ -141,7 +101,7 @@ export default function Ubicacion() {
 
       {/* ── FILA 1: Trayectoria Relativa al Lanzamiento ── */}
       <section className="ubi-row ubi-row--map">
-        <div className="map-panel">
+        <div className="map-panel premium-card-hover" style={{ '--card-color': '#2196f3' }}>
           <div className="map-grid-bg map-grid-bg--cartesian">
             
             <div className="cartesian-plot-container">
@@ -298,7 +258,7 @@ export default function Ubicacion() {
       <section className="ubi-row ubi-row--two">
 
         {/* Datos GPS */}
-        <div className="panel-card gps-data-panel">
+        <div className="panel-card gps-data-panel premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
           <h4 className="ubi-panel-header">
             <i className="fa-solid fa-satellite" style={{ marginRight: '6px', color: '#4fc3f7' }}></i>
             DATOS GPS
@@ -318,7 +278,7 @@ export default function Ubicacion() {
         </div>
 
         {/* Señal GPS */}
-        <div className="panel-card signal-card">
+        <div className="panel-card signal-card premium-card-hover" style={{ '--card-color': '#4caf50' }}>
           <h4 className="ubi-panel-header">
             <i className="fa-solid fa-signal" style={{ marginRight: '6px', color: '#4caf50' }}></i>
             SEÑAL GPS
@@ -356,48 +316,26 @@ export default function Ubicacion() {
       <section className="ubi-row ubi-row--two">
 
         {/* Altitud GPS */}
-        <div className="panel-card altitud-card">
+        <div className="panel-card altitud-card premium-card-hover" style={{ '--card-color': '#ff9800' }}>
           <h4 className="ubi-panel-header">ALTITUD GPS</h4>
           <div className="panel-main-value">
             <span className="big-value">{data.altitud_gps.v.toFixed(0)}</span>
             <span className="big-unit">m</span>
           </div>
-          <div className="chart-axes-wrap">
-            <div className="chart-y-side">
-              {altYLabels.map((val, i) => (
-                <span key={i}>{val.toFixed(0)}m</span>
-              ))}
-            </div>
-            <div className="chart-body">
-              <div className="chart-body-wrap">
-                <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="ubi-svg">
-                  <defs>
-                    <linearGradient id="altFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#ff9800" stopOpacity="0.35"/>
-                      <stop offset="100%" stopColor="#ff9800" stopOpacity="0.03"/>
-                    </linearGradient>
-                  </defs>
-                  <line x1="0" y1="0"    x2="100" y2="0"    stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="12.5" x2="100" y2="12.5" stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="25"   x2="100" y2="25"   stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="37.5" x2="100" y2="37.5" stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="50"   x2="100" y2="50"   stroke="#2a3038" strokeWidth="0.5"/>
-                  
-                  {altPoints.area && <polygon points={altPoints.area} fill="url(#altFill)"/>}
-                  {altPoints.line && <polyline points={altPoints.line} fill="none" stroke="#ff9800" strokeWidth="1.8" vectorEffect="non-scaling-stroke"/>}
-                </svg>
-                {/* HTML dynamic marker to prevent Y-axis aspect-ratio stretching */}
-                {altHist.length > 0 && (
-                  <div
-                    className="chart-marker alt-marker"
-                    style={{ left: '97%', top: `${(lastAltY / 50) * 100}%` }}
-                  ></div>
-                )}
-              </div>
-              <div className="chart-x-row">
-                <span>T-30s</span><span></span><span></span><span></span><span>ahora</span>
-              </div>
-            </div>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginTop: '4px', marginBottom: '8px' }}>
+            {altHist.length > 0 && (
+              <SensorChart
+                data={altHist.map(pt => ({
+                  value: pt.value,
+                  tsAgo: Math.max(0, (Date.now() - pt.timestamp) / 1000)
+                }))}
+                color="#ff9800"
+                yMin={0}
+                yMax={altEffectiveMax}
+                unit="m"
+                decimals={1}
+              />
+            )}
           </div>
           <div className="panel-footer-stats">
             <div><span className="stat-label">MÁX VUELO</span><span className="stat-value text-orange">{maxAltLabel} m</span></div>
@@ -410,48 +348,26 @@ export default function Ubicacion() {
         </div>
 
         {/* Distancia al Origen */}
-        <div className="panel-card distancia-card">
+        <div className="panel-card distancia-card premium-card-hover" style={{ '--card-color': '#03a9f4' }}>
           <h4 className="ubi-panel-header">DISTANCIA AL ORIGEN</h4>
           <div className="panel-main-value">
             <span className="big-value">{data.distancia_origen.v.toFixed(0)}</span>
             <span className="big-unit">m</span>
           </div>
-          <div className="chart-axes-wrap">
-            <div className="chart-y-side">
-              {distYLabels.map((val, i) => (
-                <span key={i}>{val.toFixed(0)}m</span>
-              ))}
-            </div>
-            <div className="chart-body">
-              <div className="chart-body-wrap">
-                <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="ubi-svg">
-                  <defs>
-                    <linearGradient id="distFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#03a9f4" stopOpacity="0.35"/>
-                      <stop offset="100%" stopColor="#03a9f4" stopOpacity="0.03"/>
-                    </linearGradient>
-                  </defs>
-                  <line x1="0" y1="0"    x2="100" y2="0"    stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="12.5" x2="100" y2="12.5" stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="25"   x2="100" y2="25"   stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="37.5" x2="100" y2="37.5" stroke="#2a3038" strokeWidth="0.5"/>
-                  <line x1="0" y1="50"   x2="100" y2="50"   stroke="#2a3038" strokeWidth="0.5"/>
-                  
-                  {distPoints.area && <polygon points={distPoints.area} fill="url(#distFill)"/>}
-                  {distPoints.line && <polyline points={distPoints.line} fill="none" stroke="#03a9f4" strokeWidth="1.8" vectorEffect="non-scaling-stroke"/>}
-                </svg>
-                {/* HTML dynamic marker to prevent Y-axis aspect-ratio stretching */}
-                {distHist.length > 0 && (
-                  <div
-                    className="chart-marker dist-marker"
-                    style={{ left: '97%', top: `${(lastDistY / 50) * 100}%` }}
-                  ></div>
-                )}
-              </div>
-              <div className="chart-x-row">
-                <span>T-30s</span><span></span><span></span><span></span><span>ahora</span>
-              </div>
-            </div>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginTop: '4px', marginBottom: '8px' }}>
+            {distHist.length > 0 && (
+              <SensorChart
+                data={distHist.map(pt => ({
+                  value: pt.value,
+                  tsAgo: Math.max(0, (Date.now() - pt.timestamp) / 1000)
+                }))}
+                color="#03a9f4"
+                yMin={0}
+                yMax={distEffectiveMax}
+                unit="m"
+                decimals={1}
+              />
+            )}
           </div>
           <div className="panel-footer-stats">
             <div><span className="stat-label">MÁX DIST.</span><span className="stat-value text-cyan">{maxDistLabel} m</span></div>

@@ -14,7 +14,7 @@ export default function Mision() {
     <div className="mision-view">
 
       {/* ── Panel Izquierdo: Fases de Misión ── */}
-      <section className="panel-card mision-fases">
+      <section className="panel-card mision-fases premium-card-hover" style={{ '--card-color': '#4caf50' }}>
         <div className="fase-header">
           <span className="fase-subtitle">FASE ACTUAL</span>
           <h2 className="fase-title">DESCENSO</h2>
@@ -41,7 +41,7 @@ export default function Mision() {
       </section>
 
       {/* ── Panel Derecho: Actitud/Orientación ── */}
-      <section className="panel-card mision-aceleracion">
+      <section className="panel-card mision-aceleracion premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
         <h3 className="panel-header" style={{ textAlign: 'center' }}>ORIENTACIÓN EN TIEMPO REAL</h3>
 
         <div className="aceleracion-visualizer">
@@ -68,7 +68,7 @@ export default function Mision() {
       </section>
 
       {/* ── Panel Inferior: Perfil de Altitud vs Tiempo ── */}
-      <section className="panel-card mision-perfil">
+      <section className="panel-card mision-perfil premium-card-hover" style={{ '--card-color': '#ffeb3b' }}>
         <h3 className="panel-header">
           <i className="fa-solid fa-chart-area" style={{ marginRight: '8px', color: '#ffeb3b' }}></i>
           PERFIL DE ALTITUD VS TIEMPO DE MISIÓN

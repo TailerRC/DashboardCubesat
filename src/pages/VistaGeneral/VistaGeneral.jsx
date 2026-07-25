@@ -1,78 +1,124 @@
+import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
+import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
 import './VistaGeneral.css';
 
-const cards = [
-  {
-    icon: <i className="fa-solid fa-smog"></i>,
-    value: '450.34',
-    unit: 'ppm',
-    label: 'CO2',
-    color: '#f9a825',
-  },
-  {
-    icon: <i className="fa-solid fa-biohazard"></i>,
-    value: '0.12',
-    unit: 'ppb',
-    label: 'GAS NOCIVO VOC',
-    color: '#00bcd4',
-  },
-  {
-    icon: <i className="fa-solid fa-thermometer-half"></i>,
-    value: '23.46',
-    unit: '°C',
-    label: 'TEMPERATURA',
-    color: '#ff7043',
-  },
-  {
-    icon: <i className="fa-solid fa-sun"></i>,
-    value: '2.93',
-    unit: 'UV',
-    label: 'RADIACIÓN UV',
-    color: '#ab47bc',
-  },
-  {
-    icon: <i className="fa-solid fa-mountain"></i>,
-    value: '500.67',
-    unit: 'm',
-    label: 'ALTITUD',
-    color: '#ef5350',
-  },
-  {
-    icon: <i className="fa-solid fa-bolt"></i>,
-    value: '12.46',
-    unit: 'V',
-    label: 'VOLTAJE',
-    color: '#66bb6a',
-  },
-  {
-    icon: <i className="fa-solid fa-arrow-trend-down"></i>,
-    value: 'DESCENSO',
-    unit: '',
-    label: 'FASE DE MISIÓN',
-    color: '#4caf50',
-    isText: true,
-  },
-  {
-    icon: <i className="fa-solid fa-box"></i>,
-    value: '2657',
-    unit: 'IX',
-    label: 'PAQUETES RECIBIDOS',
-    color: '#5c6bc0',
-  },
-];
-
 export default function VistaGeneral() {
+  const { sensors: ambSensors, estadoAmbiental, activeAlerts, isConnected } = useAmbientalMqtt();
+  const { data: ubiData } = useUbicacionMqtt();
+  const { data: satData } = useSateliteMqtt();
+
+  // Safety values checks with robust fallbacks
+  const co2Val = ambSensors.co2_ppm?.v !== undefined ? ambSensors.co2_ppm.v.toFixed(2) : '---';
+  const vocVal = ambSensors.gas_voc_ppb?.v !== undefined ? ambSensors.gas_voc_ppb.v.toFixed(2) : '---';
+  const tempVal = ambSensors.temperatura_c?.v !== undefined ? ambSensors.temperatura_c.v.toFixed(2) : '---';
+  const uvVal = ambSensors.radiacion_uv?.v !== undefined ? ambSensors.radiacion_uv.v.toFixed(2) : '---';
+  const altVal = ubiData.altitud_gps?.v !== undefined ? ubiData.altitud_gps.v.toFixed(2) : '---';
+  const voltVal = satData.voltaje_v?.v !== undefined ? satData.voltaje_v.v.toFixed(2) : '---';
+
+  const cards = [
+    {
+      icon: <i className="fa-solid fa-smog"></i>,
+      value: co2Val,
+      unit: 'ppm',
+      label: 'CO2',
+      color: '#f9a825',
+    },
+    {
+      icon: <i className="fa-solid fa-biohazard"></i>,
+      value: vocVal,
+      unit: 'ppb',
+      label: 'GAS NOCIVO VOC',
+      color: '#00bcd4',
+    },
+    {
+      icon: <i className="fa-solid fa-thermometer-half"></i>,
+      value: tempVal,
+      unit: '°C',
+      label: 'TEMPERATURA',
+      color: '#ff7043',
+    },
+    {
+      icon: <i className="fa-solid fa-sun"></i>,
+      value: uvVal,
+      unit: 'UV',
+      label: 'RADIACIÓN UV',
+      color: '#ab47bc',
+    },
+    {
+      icon: <i className="fa-solid fa-mountain"></i>,
+      value: altVal,
+      unit: 'm',
+      label: 'ALTITUD',
+      color: '#ef5350',
+    },
+    {
+      icon: <i className="fa-solid fa-bolt"></i>,
+      value: voltVal,
+      unit: 'V',
+      label: 'VOLTAJE',
+      color: '#66bb6a',
+    },
+    {
+      icon: <i className="fa-solid fa-arrow-trend-down"></i>,
+      value: 'DESCENSO',
+      unit: '',
+      label: 'FASE DE MISIÓN',
+      color: '#4caf50',
+      isText: true,
+    },
+    {
+      icon: <i className="fa-solid fa-box"></i>,
+      value: '2657',
+      unit: 'IX',
+      label: 'PAQUETES RECIBIDOS',
+      color: '#5c6bc0',
+    },
+  ];
+
+  // Dynamic Safety Banner
+  let statusLabel = 'SIN DATOS';
+  let detailText  = 'CONECTANDO CON SATÉLITE...';
+  let bannerClass = 'security-banner--info';
+  let iconClass   = 'fa-circle-info';
+
+  if (isConnected) {
+    const count = activeAlerts.length;
+    if (estadoAmbiental === 'ANOMALIA') {
+      statusLabel = 'ANOMALÍA';
+      detailText  = 'ALERTA: DESCOMPRESIÓN RÁPIDA DETECTADA (PA/S CAÍDA)';
+      bannerClass = 'security-banner--danger';
+      iconClass   = 'fa-gauge-high fa-fade';
+    } else if (count === 0) {
+      statusLabel = 'SEGURO';
+      detailText  = 'TODOS LOS PARAMETROS EN RANGO NORMAL';
+      bannerClass = 'security-banner--ok';
+      iconClass   = 'fa-circle-check';
+    } else if (count <= 3) {
+      statusLabel = 'EN RIESGO';
+      detailText  = `PARÁMETROS FUERA DEL UMBRAL: ${activeAlerts.join(', ')}`;
+      bannerClass = 'security-banner--warning';
+      iconClass   = 'fa-triangle-exclamation';
+    } else {
+      statusLabel = 'CRÍTICO';
+      detailText  = `PARÁMETROS FUERA DEL UMBRAL: ${activeAlerts.join(', ')}`;
+      bannerClass = 'security-banner--danger';
+      iconClass   = 'fa-triangle-exclamation fa-fade';
+    }
+  }
+
   return (
     <div className="vista-general">
       {/* Security Status */}
       <section className="security-status">
         <h3 className="section-title">ESTADO AMBIENTAL DE SEGURIDAD</h3>
-        <div className="security-banner security-banner--ok">
+        <div className={`security-banner ${bannerClass}`}>
           <div className="security-icon">
-            <i className="fa-solid fa-circle-check" style={{ fontSize: '18px', color: '#fff' }}></i>
+            <i className={`fa-solid ${iconClass}`} style={{ fontSize: '18px', color: '#fff' }}></i>
           </div>
           <div className="security-text">
-            <span className="security-label">SEGURO</span>
-            <span className="security-detail">TODOS LOS PARAMETROS EN RANGO NORMAL</span>
+            <span className="security-label">{statusLabel}</span>
+            <span className="security-detail">{detailText}</span>
           </div>
         </div>
       </section>
@@ -80,7 +126,7 @@ export default function VistaGeneral() {
       {/* Data Cards */}
       <section className="data-cards">
         {cards.map((card, i) => (
-          <div key={i} className="data-card">
+          <div key={i} className="data-card premium-card-hover" style={{ '--card-color': card.color }}>
             <div className="card-icon" style={{ color: card.color }}>
               {card.icon}
             </div>

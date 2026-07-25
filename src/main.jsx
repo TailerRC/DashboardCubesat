@@ -5,10 +5,12 @@ import './assets/fontawesome/css/all.min.css'
 import App from './App.jsx'
 import { startAmbientalMockPublisher } from './mqtt/simulacion/ambientalMock'
 import { startUbicacionMockPublisher } from './mqtt/simulacion/ubicacionMock'
+import { startSateliteMockPublisher } from './mqtt/simulacion/sateliteMock'
 
 // Start mock CubeSat MQTT telemetry stream
 startAmbientalMockPublisher();
 startUbicacionMockPublisher();
+startSateliteMockPublisher();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

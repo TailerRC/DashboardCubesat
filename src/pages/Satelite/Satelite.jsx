@@ -1,141 +1,173 @@
+import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
+import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import SensorChart from '../../components/Charts/SensorChart';
 import './Satelite.css';
 
 export default function Satelite() {
+  const { data: satData, isConnected: satConnected } = useSateliteMqtt();
+  const { data: ubiData } = useUbicacionMqtt();
+
+  // 1. Voltaje Batería
+  const voltVal = satData.voltaje_v.v;
+  // Battery operating range: 9.6V (depleted) to 12.8V (fully charged)
+  const voltPct = Math.max(0, Math.min(100, ((voltVal - 9.6) / (12.8 - 9.6)) * 100));
+  const voltHistory = satData.voltaje_v.history || [];
+  const voltVals = voltHistory.map(h => h.value);
+  const minVoltVal = voltVals.length > 0 ? Math.min(...voltVals) : voltVal;
+  const voltDrop = voltVal - 12.80;
+
+  // 2. Corriente
+  const currVal = satData.corriente_ma.v;
+  const currPct = Math.max(0, Math.min(100, (currVal / 900) * 100));
+  const currHistory = satData.corriente_ma.history || [];
+  const currVals = currHistory.map(h => h.value);
+  const maxCurrVal = currVals.length > 0 ? Math.max(...currVals) : currVal;
+
+  // 3. Consumo Energía
+  const consVal = satData.consumo_w.v;
+  const consPct = Math.max(0, Math.min(100, (consVal / 10.0) * 100));
+  const consHistory = satData.consumo_w.history || [];
+  const consVals = consHistory.map(h => h.value);
+  const maxConsVal = consVals.length > 0 ? Math.max(...consVals) : consVal;
+
+  // 4. Acelerómetro
+  const accelX = satData.accel_x.v;
+  const accelY = satData.accel_y.v;
+  const accelZ = satData.accel_z.v;
+
+  const getSliderLeft = (val) => {
+    return Math.max(0, Math.min(100, ((val + 20) / 40) * 100)) + '%';
+  };
+
+  // 5. Estado del Sistema
+  const actSensors = satData.sensores_activos.v;
+  const totalSensors = satData.sensores_activos.total || 7;
+  const tempMcu = satData.temp_mcu.v;
+  const flashOk = satData.memoria_flash_ok.v;
+  
+  // Re-use GPS fix data from useUbicacionMqtt to prevent duplication
+  const satsCount = ubiData.satelites.v;
+  const hasGpsFix = satsCount >= 4;
+  const gpsFixText = hasGpsFix ? `3D FIX · ${satsCount} sat.` : 'NO FIX';
+
+  // Format uptime counter
+  const uptimeSecs = satData.tiempo_encendido_seg.v;
+  const formatUptime = (totalSecs) => {
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    return [
+      h.toString().padStart(2, '0'),
+      m.toString().padStart(2, '0'),
+      s.toString().padStart(2, '0')
+    ].join(':');
+  };
+
   return (
-    <div className="satelite-view">
+    <div className={`satelite-view ${!satConnected ? 'view-stale' : ''}`}>
 
       {/* ── Top Grid: 3 Power Gauges ── */}
       <section className="satelite-top-grid">
 
         {/* Voltaje Batería */}
-        <div className="satelite-card">
+        <div className="satelite-card premium-card-hover" style={{ '--card-color': '#ef5350' }}>
           <h4 className="card-header text-center">VOLTAJE BATERÍA</h4>
           <div className="circle-gauge-container">
-            <div className="circle-gauge red-gauge">
-              <span className="value">12.5</span>
+            <div className="circle-gauge red-gauge" style={{ background: `conic-gradient(#ef5350 ${voltPct}%, #2a3038 ${voltPct}%)` }}>
+              <span className="value">{voltVal.toFixed(2)}</span>
               <span className="unit">Voltios</span>
-              <span className="gauge-pct">97.7%</span>
             </div>
           </div>
           <div className="mini-stats">
             <div><span className="stat-lbl">Inicial</span><span className="stat-val text-red">12.80 V</span></div>
-            <div><span className="stat-lbl">Actual</span><span className="stat-val text-red">11.61 V</span></div>
-            <div><span className="stat-lbl">Mínimo</span><span className="stat-val">11.43 V</span></div>
-            <div><span className="stat-lbl">Caída</span><span className="stat-val text-yellow">−1.62 V</span></div>
+            <div><span className="stat-lbl">Actual</span><span className="stat-val text-red">{voltVal.toFixed(2)} V</span></div>
+            <div><span className="stat-lbl">Mínimo</span><span className="stat-val">{minVoltVal.toFixed(2)} V</span></div>
+            <div><span className="stat-lbl">Caída</span><span className="stat-val text-yellow">{voltDrop.toFixed(2)} V</span></div>
           </div>
-          <div className="sat-chart-wrap">
-            <div className="sat-chart-y">
-              <span>13.0V</span>
-              <span>12.0V</span>
-              <span>11.0V</span>
-            </div>
-            <div className="sat-chart-body">
-              <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="sat-graph-svg">
-                <defs>
-                  <linearGradient id="vBatFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef5350" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="#ef5350" stopOpacity="0.03"/>
-                  </linearGradient>
-                </defs>
-                <line x1="0" y1="0"  x2="100" y2="0"  stroke="#2a3038" strokeWidth="0.5"/>
-                <line x1="0" y1="15" x2="100" y2="15" stroke="#2a3038" strokeWidth="0.5"/>
-                <line x1="0" y1="30" x2="100" y2="30" stroke="#2a3038" strokeWidth="0.5"/>
-                <polygon points="0,30 0,5 15,6 30,8 45,10 60,12 75,14 90,15 100,16 100,30" fill="url(#vBatFill)"/>
-                <polyline points="0,5 15,6 30,8 45,10 60,12 75,14 90,15 100,16" fill="none" stroke="#ef5350" strokeWidth="1.5"/>
-                <circle cx="100" cy="16" r="2" fill="#ef5350" stroke="#fff" strokeWidth="0.8"/>
-              </svg>
-              <div className="sat-chart-x">
-                <span>−60s</span><span>−45s</span><span>−30s</span><span>−15s</span><span>0s</span>
-              </div>
-            </div>
+          <div className="card-note">
+            <i className="fa-solid fa-circle-info text-red" style={{ marginRight: '5px' }}></i>
+            Rango seguro: 11.5 V – 12.8 V. Descarga crítica: 9.6 V.
+          </div>
+          <div style={{ height: '190px', display: 'flex', flexDirection: 'column', marginTop: '6px' }}>
+            <SensorChart
+              data={voltHistory.map(pt => ({
+                value: pt.value,
+                tsAgo: Math.max(0, (Date.now() - pt.timestamp) / 1000)
+              }))}
+              color="#ef5350"
+              yMin={11.0}
+              yMax={13.0}
+              unit="V"
+              decimals={2}
+            />
           </div>
         </div>
 
         {/* Corriente */}
-        <div className="satelite-card">
+        <div className="satelite-card premium-card-hover" style={{ '--card-color': '#42a5f5' }}>
           <h4 className="card-header text-center">CORRIENTE</h4>
           <div className="circle-gauge-container">
-            <div className="circle-gauge blue-gauge">
-              <span className="value">455.8</span>
+            <div className="circle-gauge blue-gauge" style={{ background: `conic-gradient(#42a5f5 ${currPct}%, #2a3038 ${currPct}%)` }}>
+              <span className="value">{currVal.toFixed(1)}</span>
               <span className="unit">mA</span>
-              <span className="gauge-pct">50.6%</span>
             </div>
           </div>
           <div className="mini-stats">
             <div><span className="stat-lbl">Base</span><span className="stat-val text-blue">380 mA</span></div>
-            <div><span className="stat-lbl">Actual</span><span className="stat-val text-blue">455.8 mA</span></div>
-            <div><span className="stat-lbl">Pico Máx</span><span className="stat-val">620 mA</span></div>
+            <div><span className="stat-lbl">Actual</span><span className="stat-val text-blue">{currVal.toFixed(1)} mA</span></div>
+            <div><span className="stat-lbl">Pico Máx</span><span className="stat-val">{maxCurrVal.toFixed(1)} mA</span></div>
             <div><span className="stat-lbl">Límite</span><span className="stat-val">900 mA</span></div>
           </div>
-          <div className="sat-chart-wrap">
-            <div className="sat-chart-y">
-              <span>600mA</span>
-              <span>450mA</span>
-              <span>300mA</span>
-            </div>
-            <div className="sat-chart-body">
-              <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="sat-graph-svg">
-                <defs>
-                  <linearGradient id="corrFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#42a5f5" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="#42a5f5" stopOpacity="0.03"/>
-                  </linearGradient>
-                </defs>
-                <line x1="0" y1="0"  x2="100" y2="0"  stroke="#2a3038" strokeWidth="0.5"/>
-                <line x1="0" y1="15" x2="100" y2="15" stroke="#2a3038" strokeWidth="0.5"/>
-                <line x1="0" y1="30" x2="100" y2="30" stroke="#2a3038" strokeWidth="0.5"/>
-                <polygon points="0,30 0,14 15,12 30,18 45,13 60,16 75,12 90,15 100,14 100,30" fill="url(#corrFill)"/>
-                <polyline points="0,14 15,12 30,18 45,13 60,16 75,12 90,15 100,14" fill="none" stroke="#42a5f5" strokeWidth="1.5"/>
-                <circle cx="100" cy="14" r="2" fill="#42a5f5" stroke="#fff" strokeWidth="0.8"/>
-              </svg>
-              <div className="sat-chart-x">
-                <span>−60s</span><span>−45s</span><span>−30s</span><span>−15s</span><span>0s</span>
-              </div>
-            </div>
+          <div className="card-note">
+            <i className="fa-solid fa-circle-info text-blue" style={{ marginRight: '5px' }}></i>
+            Transmisión activa: ~450 mA. EPS protección: 900 mA.
+          </div>
+          <div style={{ height: '190px', display: 'flex', flexDirection: 'column', marginTop: '6px' }}>
+            <SensorChart
+              data={currHistory.map(pt => ({
+                value: pt.value,
+                tsAgo: Math.max(0, (Date.now() - pt.timestamp) / 1000)
+              }))}
+              color="#42a5f5"
+              yMin={0}
+              yMax={900}
+              unit="mA"
+              decimals={1}
+            />
           </div>
         </div>
 
         {/* Consumo Energía */}
-        <div className="satelite-card">
+        <div className="satelite-card premium-card-hover" style={{ '--card-color': '#ba68c8' }}>
           <h4 className="card-header text-center">CONSUMO ENERGÍA</h4>
           <div className="circle-gauge-container">
-            <div className="circle-gauge purple-gauge">
-              <span className="value">4.56</span>
+            <div className="circle-gauge purple-gauge" style={{ background: `conic-gradient(#ba68c8 ${consPct}%, #2a3038 ${consPct}%)` }}>
+              <span className="value">{consVal.toFixed(2)}</span>
               <span className="unit">Watts</span>
-              <span className="gauge-pct">45.6%</span>
             </div>
           </div>
           <div className="mini-stats">
             <div><span className="stat-lbl">Base</span><span className="stat-val">4.5 W</span></div>
-            <div><span className="stat-lbl">Actual</span><span className="stat-val text-purple">4.56 W</span></div>
-            <div><span className="stat-lbl">Pico Máx</span><span className="stat-val">10.25 W</span></div>
+            <div><span className="stat-lbl">Actual</span><span className="stat-val text-purple">{consVal.toFixed(2)} W</span></div>
+            <div><span className="stat-lbl">Pico Máx</span><span className="stat-val">{maxConsVal.toFixed(2)} W</span></div>
             <div><span className="stat-lbl">Límite</span><span className="stat-val">10 W</span></div>
           </div>
-          <div className="sat-chart-wrap">
-            <div className="sat-chart-y">
-              <span>8.0W</span>
-              <span>5.0W</span>
-              <span>2.0W</span>
-            </div>
-            <div className="sat-chart-body">
-              <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="sat-graph-svg">
-                <defs>
-                  <linearGradient id="powFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ba68c8" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="#ba68c8" stopOpacity="0.03"/>
-                  </linearGradient>
-                </defs>
-                <line x1="0" y1="0"  x2="100" y2="0"  stroke="#2a3038" strokeWidth="0.5"/>
-                <line x1="0" y1="15" x2="100" y2="15" stroke="#2a3038" strokeWidth="0.5"/>
-                <line x1="0" y1="30" x2="100" y2="30" stroke="#2a3038" strokeWidth="0.5"/>
-                <polygon points="0,30 0,16 15,12 30,18 45,8 60,16 75,12 90,18 100,16 100,30" fill="url(#powFill)"/>
-                <polyline points="0,16 15,12 30,18 45,8 60,16 75,12 90,18 100,16" fill="none" stroke="#ba68c8" strokeWidth="1.5"/>
-                <circle cx="100" cy="16" r="2" fill="#ba68c8" stroke="#fff" strokeWidth="0.8"/>
-              </svg>
-              <div className="sat-chart-x">
-                <span>−60s</span><span>−45s</span><span>−30s</span><span>−15s</span><span>0s</span>
-              </div>
-            </div>
+          <div className="card-note">
+            <i className="fa-solid fa-circle-info text-purple" style={{ marginRight: '5px' }}></i>
+            Disipación de potencia: EPS térmica límite a 10 W.
+          </div>
+          <div style={{ height: '190px', display: 'flex', flexDirection: 'column', marginTop: '6px' }}>
+            <SensorChart
+              data={consHistory.map(pt => ({
+                value: pt.value,
+                tsAgo: Math.max(0, (Date.now() - pt.timestamp) / 1000)
+              }))}
+              color="#ba68c8"
+              yMin={0.0}
+              yMax={10.0}
+              unit="W"
+              decimals={2}
+            />
           </div>
         </div>
 
@@ -145,16 +177,16 @@ export default function Satelite() {
       <section className="satelite-bottom-grid">
 
         {/* Aceleración 3 ejes */}
-        <div className="satelite-card">
+        <div className="satelite-card premium-card-hover" style={{ '--card-color': '#66bb6a' }}>
           <h4 className="card-header text-center">ACELERÓMETRO 3 EJES (m/s²)</h4>
           <div className="accel-container">
             {/* X axis */}
             <div className="accel-row">
               <span className="accel-label text-red">X</span>
               <div className="accel-gauge-wrapper">
-                <div className="accel-status-text">+9.0 m/s²</div>
+                <div className="accel-status-text">{accelX >= 0 ? '+' : ''}{accelX.toFixed(1)} m/s²</div>
                 <div className="accel-slider-track">
-                  <div className="accel-indicator" style={{ left: '72.5%', backgroundColor: '#ef5350' }}></div>
+                  <div className="accel-indicator" style={{ left: getSliderLeft(accelX), backgroundColor: '#ef5350' }}></div>
                 </div>
                 <div className="accel-ticks">
                   <span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span>
@@ -165,9 +197,9 @@ export default function Satelite() {
             <div className="accel-row">
               <span className="accel-label text-yellow">Y</span>
               <div className="accel-gauge-wrapper">
-                <div className="accel-status-text">+7.2 m/s²</div>
+                <div className="accel-status-text">{accelY >= 0 ? '+' : ''}{accelY.toFixed(1)} m/s²</div>
                 <div className="accel-slider-track">
-                  <div className="accel-indicator" style={{ left: '68%', backgroundColor: '#ffca28' }}></div>
+                  <div className="accel-indicator" style={{ left: getSliderLeft(accelY), backgroundColor: '#ffca28' }}></div>
                 </div>
                 <div className="accel-ticks">
                   <span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span>
@@ -178,9 +210,9 @@ export default function Satelite() {
             <div className="accel-row">
               <span className="accel-label text-green">Z</span>
               <div className="accel-gauge-wrapper">
-                <div className="accel-status-text">+8.5 m/s²</div>
+                <div className="accel-status-text">{accelZ >= 0 ? '+' : ''}{accelZ.toFixed(1)} m/s²</div>
                 <div className="accel-slider-track">
-                  <div className="accel-indicator" style={{ left: '71.25%', backgroundColor: '#66bb6a' }}></div>
+                  <div className="accel-indicator" style={{ left: getSliderLeft(accelZ), backgroundColor: '#66bb6a' }}></div>
                 </div>
                 <div className="accel-ticks">
                   <span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span>
@@ -191,32 +223,28 @@ export default function Satelite() {
         </div>
 
         {/* Estado del Sistema */}
-        <div className="satelite-card">
+        <div className="satelite-card premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
           <h4 className="card-header text-center">ESTADO DEL SISTEMA</h4>
           <div className="system-status-list">
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-microchip fa-fw" style={{color:'#4fc3f7', marginRight:'6px'}}></i>Sensores Activos</span>
-              <span className="sys-value text-green">7 / 7</span>
+              <span className="sys-value text-green">{actSensors} / {totalSensors}</span>
             </div>
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-temperature-half fa-fw" style={{color:'#ff7043', marginRight:'6px'}}></i>Temperatura MCU</span>
-              <span className="sys-value">28.3 °C</span>
+              <span className="sys-value">{tempMcu.toFixed(1)} °C</span>
             </div>
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-memory fa-fw" style={{color:'#66bb6a', marginRight:'6px'}}></i>Memoria Flash</span>
-              <span className="sys-value text-green">OK</span>
-            </div>
-            <div className="system-status-item">
-              <span className="sys-label"><i className="fa-solid fa-sd-card fa-fw" style={{color:'#66bb6a', marginRight:'6px'}}></i>SD Card</span>
-              <span className="sys-value text-green">OK — 2.1 GB libres</span>
+              <span className="sys-value text-green">{flashOk ? 'OK' : 'ERROR'}</span>
             </div>
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-satellite fa-fw" style={{color:'#4fc3f7', marginRight:'6px'}}></i>GPS Fix</span>
-              <span className="sys-value text-green">3D FIX · 9 sat.</span>
+              <span className={`sys-value ${hasGpsFix ? 'text-green' : 'text-red'}`}>{gpsFixText}</span>
             </div>
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-clock fa-fw" style={{color:'#ab47bc', marginRight:'6px'}}></i>Tiempo Encendido</span>
-              <span className="sys-value">01:05:23</span>
+              <span className="sys-value">{formatUptime(uptimeSecs)}</span>
             </div>
           </div>
         </div>

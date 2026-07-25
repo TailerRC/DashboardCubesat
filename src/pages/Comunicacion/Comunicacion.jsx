@@ -12,24 +12,24 @@ export default function Comunicacion() {
       
       {/* Top Stats Grid */}
       <section className="com-stats-grid">
-        <div className="com-stat-card">
+        <div className="com-stat-card premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
           <span className="com-stat-title">PAQUETES ENVIADOS</span>
           <div className="com-stat-value blue-text">5880</div>
           <span className="com-stat-subtitle">Desde el satélite</span>
         </div>
         
-        <div className="com-stat-card">
+        <div className="com-stat-card premium-card-hover" style={{ '--card-color': '#8bc34a' }}>
           <span className="com-stat-title">PAQUETES RECIBIDOS</span>
           <div className="com-stat-value green-text">6265</div>
           <span className="com-stat-subtitle">En estación terrena</span>
         </div>
         
-        <div className="com-stat-card">
+        <div className="com-stat-card premium-card-hover" style={{ '--card-color': '#ff9800' }}>
           <span className="com-stat-title">PAQUETES PERDIDOS</span>
           <div className="com-stat-value orange-text">- 318</div>
         </div>
         
-        <div className="com-stat-card">
+        <div className="com-stat-card premium-card-hover" style={{ '--card-color': '#ffeb3b' }}>
           <span className="com-stat-title">FRECUENCIA TX</span>
           <div className="com-stat-value yellow-text">433 <span className="unit-small">MHz</span></div>
         </div>
@@ -38,7 +38,7 @@ export default function Comunicacion() {
       {/* Middle Grid */}
       <section className="com-middle-grid">
         {/* Signal Stats */}
-        <div className="panel-card signal-panel">
+        <div className="panel-card signal-panel premium-card-hover" style={{ '--card-color': '#2196f3' }}>
           <div className="signal-header">
             <i className="fa-solid fa-tower-broadcast" style={{ color: '#fff', fontSize: '24px' }}></i>
             <h2>ENLACE ACTIVO</h2>
@@ -54,7 +54,7 @@ export default function Comunicacion() {
         </div>
 
         {/* Visualizacion de paquetes */}
-        <div className="panel-card pkt-panel">
+        <div className="panel-card pkt-panel premium-card-hover" style={{ '--card-color': '#4caf50' }}>
           <h3 className="panel-header" style={{textTransform: 'none'}}>Visualización de Paquetes</h3>
           
           <div className="pkt-blocks">
@@ -77,7 +77,7 @@ export default function Comunicacion() {
       </section>
 
       {/* Bottom Log */}
-      <section className="panel-card log-panel">
+      <section className="panel-card log-panel premium-card-hover" style={{ '--card-color': '#ffb74d' }}>
         <h3 className="panel-header">LOG DE PAQUETES RECIENTES</h3>
         <div className="log-container">
           <div className="log-line"><span>08:13:25</span> <span className="log-ok">[RX OK]</span> PKT#001 - CO2:409 T:23.3 H:66.0</div>

@@ -53,3 +53,35 @@ body {
   background: rgba(76, 175, 80, 0.3);
   color: #fff;
 }
+
+/* ─── Premium Card Hover Effect ─── */
+.premium-card-hover {
+  position: relative;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease !important;
+}
+
+.premium-card-hover:hover {
+  border-color: var(--card-color, #4caf50) !important;
+  box-shadow: 0 0 0 1px var(--card-color, #4caf50),
+              0 8px 32px -8px color-mix(in srgb, var(--card-color, #4caf50) 30%, transparent) !important;
+  transform: translateY(-3px) !important;
+  z-index: 5;
+}
+
+.premium-card-hover::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--card-color, #4caf50), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.premium-card-hover:hover::before {
+  opacity: 1;
+}
+

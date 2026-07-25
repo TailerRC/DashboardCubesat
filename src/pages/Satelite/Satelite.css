@@ -3,16 +3,18 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  height: 100%;
+  min-height: min-content;
+  padding-bottom: 20px;
 }
 
 .satelite-top-grid,
 .satelite-bottom-grid {
   display: flex;
   gap: 14px;
+  width: 100%;
 }
-.satelite-top-grid  { flex: 1 1 55%; min-height: 0; }
-.satelite-bottom-grid { flex: 1 1 38%; min-height: 0; }
+.satelite-top-grid  { height: 520px; flex-shrink: 0; }
+.satelite-bottom-grid { height: 210px; flex-shrink: 0; }
 
 .satelite-card {
   flex: 1;
@@ -30,12 +32,12 @@
 
 /* ─── Card Header ─── */
 .card-header {
-  font-size: 10px;
-  font-weight: 700;
-  color: #6b7280;
+  font-size: 13px;
+  font-weight: 750;
+  color: #9ca3af;
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
 }
 .text-center { text-align: center; }
 
@@ -45,8 +47,8 @@
   justify-content: center;
 }
 .circle-gauge {
-  width: 90px;
-  height: 90px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -57,7 +59,7 @@
 .circle-gauge::before {
   content: '';
   position: absolute;
-  top: 7px; left: 7px; right: 7px; bottom: 7px;
+  top: 12px; left: 12px; right: 12px; bottom: 12px;
   border-radius: 50%;
   background-color: #1a1e23;
   z-index: 1;
@@ -65,15 +67,15 @@
 .circle-gauge span { position: relative; z-index: 2; }
 
 .circle-gauge .value {
-  font-size: 20px;
+  font-size: 34px;
   font-weight: 700;
   color: #fff;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
 }
 .circle-gauge .unit {
-  font-size: 10px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #8b8fa3;
 }
 
 .red-gauge    { background: conic-gradient(#ef5350 60%, #2a3038 60%); }
@@ -99,6 +101,18 @@
 }
 
 /* ─── Mini Stats ─── */
+.card-note {
+  font-size: 9px;
+  color: #8b8fa3;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 2px solid var(--card-color);
+  padding: 4px 6px;
+  border-radius: 0 4px 4px 0;
+  margin-top: 1px;
+  margin-bottom: 2px;
+  line-height: 1.35;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
 .mini-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
