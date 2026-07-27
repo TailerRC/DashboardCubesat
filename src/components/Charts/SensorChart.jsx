@@ -1,21 +1,25 @@
-import { useState, useCallback, useRef, useId, useMemo } from 'react';
+import { useState, useCallback, useRef, useId, useMemo, useEffect } from 'react';
 import './SensorChart.css';
 
 const SVG_W = 400;
 const SVG_H = 90;
+const PAD_Y = 6; // Padding vertical para evitar que puntos y líneas toquen los bordes extremos
 
 /**
  * Maps a data value to SVG Y coordinate (top = high value).
  */
 function valToY(val, yMin, yMax) {
+  if (yMax === yMin) return SVG_H / 2;
   const clamped = Math.max(yMin, Math.min(yMax, val));
-  return SVG_H - ((clamped - yMin) / (yMax - yMin)) * SVG_H;
+  const usableH = SVG_H - PAD_Y * 2;
+  return (SVG_H - PAD_Y) - ((clamped - yMin) / (yMax - yMin)) * usableH;
 }
 
 /**
  * Maps index 0..N-1 to SVG X coordinate.
  */
 function idxToX(i, total) {
+  if (total <= 1) return SVG_W / 2;
   return (i / (total - 1)) * SVG_W;
 }
 
@@ -33,10 +37,10 @@ function buildPoints(data, yMin, yMax) {
  */
 function buildPolygon(data, yMin, yMax) {
   const top = buildPoints(data, yMin, yMax);
-  return `${idxToX(0, data.length)},${SVG_H} ${top} ${idxToX(data.length - 1, data.length)},${SVG_H}`;
+  return `${idxToX(0, data.length)},${SVG_H - PAD_Y} ${top} ${idxToX(data.length - 1, data.length)},${SVG_H - PAD_Y}`;
 }
 
-// ── Y-axis labels ─────────────────────────────────────────────────────────
+// ── Fixed Y-axis labels (Static) ─────────────────────────────────────────
 function yLabels(yMin, yMax, steps = 3) {
   const out = [];
   for (let i = steps - 1; i >= 0; i--) {
@@ -46,21 +50,17 @@ function yLabels(yMin, yMax, steps = 3) {
   return out;
 }
 
-// ── X-axis labels (time): LEFT = oldest, RIGHT = "ahora" ────────────────
-// data[0] = oldest (largest tsAgo), data[N-1] = newest (tsAgo ≈ 0)
-// SVG x=0 maps to data[0] (LEFT), SVG x=SVG_W maps to data[N-1] (RIGHT)
-function xLabels(data, steps = 5) {
+// ── Fixed X-axis labels (Static time steps e.g. -20s, -15s, -10s, -5s, ahora) ──
+function xLabels(steps = 5, windowSecs = 20) {
   const out = [];
-  const indices = [];
   for (let i = 0; i < steps; i++) {
-    indices.push(Math.round((i * (data.length - 1)) / (steps - 1)));
+    if (i === steps - 1) {
+      out.push('ahora');
+    } else {
+      const secAgo = Math.round(windowSecs * (1 - i / (steps - 1)));
+      out.push(`−${secAgo}s`);
+    }
   }
-  for (const idx of indices) {
-    const tsAgo = data[idx]?.tsAgo ?? 0;
-    // Rightmost point (tsAgo ≈ 0) → "ahora", others → "−Xs"
-    out.push(tsAgo < 1 ? 'ahora' : `−${Math.round(tsAgo)}s`);
-  }
-  // No reverse — left=oldest, right=newest naturally
   return out;
 }
 
@@ -73,19 +73,41 @@ export default function SensorChart({
   yMax = 100,
   unit = '',
   decimals = 1,
-  thresholdY = null,   // real value (e.g. 450 ppm) — draws dashed red line
+  thresholdY = null,      // real value (e.g. 450 ppm) — draws dashed red line
+  autoScaleY = false,     // Default FALSE to keep Y-axis values static and fixed!
 }) {
   const uid = useId().replace(/:/g, '');
   const gradId = `grad-${uid}`;
   const clipId = `clip-${uid}`;
 
   const bodyRef = useRef(null);
-  const [hover, setHover] = useState(null); // { idx, x, y, value, tsAgo }
+  const [hover, setHover] = useState(null);
+  const [bodyDim, setBodyDim] = useState({ w: 400, h: 72 });
 
-  // ── Auto-scale Y to actual data range + padding ──────────────────────────
-  // This ensures the line always fills the chart vertically and includes the threshold
+  // ── Measure physical container dimensions to correct circle scale ───────
+  useEffect(() => {
+    if (!bodyRef.current) return;
+    const updateDim = () => {
+      if (bodyRef.current) {
+        const rect = bodyRef.current.getBoundingClientRect();
+        setBodyDim({
+          w: Math.max(1, rect.width),
+          h: Math.max(1, rect.height - 18), // Subtract x-axis labels height
+        });
+      }
+    };
+    updateDim();
+    const observer = new ResizeObserver(updateDim);
+    observer.observe(bodyRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const scaleX = bodyDim.w / SVG_W;
+  const scaleY = bodyDim.h / SVG_H;
+
+  // ── Static Y axis bounds (or auto-scale if autoScaleY === true) ───────────
   const effectiveYMin = useMemo(() => {
-    if (data.length === 0) return yMin;
+    if (!autoScaleY || data.length === 0) return yMin;
     const dMin = Math.min(...data.map(d => d.value));
     const dMax = Math.max(...data.map(d => d.value));
     const pad = Math.max((dMax - dMin) * 0.25, (yMax - yMin) * 0.05);
@@ -95,10 +117,10 @@ export default function SensorChart({
       targetMin = Math.min(targetMin, thresholdY - pad * 0.5);
     }
     return Math.max(yMin, targetMin);
-  }, [data, yMin, yMax, thresholdY]);
+  }, [data, yMin, yMax, thresholdY, autoScaleY]);
 
   const effectiveYMax = useMemo(() => {
-    if (data.length === 0) return yMax;
+    if (!autoScaleY || data.length === 0) return yMax;
     const dMin = Math.min(...data.map(d => d.value));
     const dMax = Math.max(...data.map(d => d.value));
     const pad = Math.max((dMax - dMin) * 0.25, (yMax - yMin) * 0.05);
@@ -108,7 +130,14 @@ export default function SensorChart({
       targetMax = Math.max(targetMax, thresholdY + pad * 0.5);
     }
     return Math.min(yMax, targetMax);
-  }, [data, yMax, yMin, thresholdY]);
+  }, [data, yMax, yMin, thresholdY, autoScaleY]);
+
+  // Determine windowSecs from dataset or default to 20s
+  const maxTsAgo = useMemo(() => {
+    if (data.length === 0) return 20;
+    const maxAgo = Math.max(...data.map(d => d.tsAgo ?? 0));
+    return maxAgo > 0 ? Math.ceil(maxAgo / 5) * 5 : 20;
+  }, [data]);
 
   // ── Mouse tracking ──────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e) => {
@@ -120,13 +149,13 @@ export default function SensorChart({
     const pt = data[idx];
     if (!pt) return;
 
-    // Convert SVG coordinates back to pixel for tooltip positioning
     const svgX = idxToX(idx, data.length);
     const svgY = valToY(pt.value, effectiveYMin, effectiveYMax);
     const pxX = (svgX / SVG_W) * rect.width;
-    const pxY = (svgY / SVG_H) * (rect.height);
+    const svgHPx = rect.height - 18;
+    const pxY = (svgY / SVG_H) * svgHPx;
 
-    setHover({ idx, pxX, pxY, pxYFrac: pxY / rect.height, value: pt.value, tsAgo: pt.tsAgo });
+    setHover({ idx, pxX, pxY, pxYFrac: pxY / svgHPx, value: pt.value, tsAgo: pt.tsAgo });
   }, [data, effectiveYMin, effectiveYMax]);
 
   const handleMouseLeave = useCallback(() => setHover(null), []);
@@ -134,19 +163,20 @@ export default function SensorChart({
   // ── Derived SVG data ────────────────────────────────────────────────────
   const polyPoints = buildPoints(data, effectiveYMin, effectiveYMax);
   const polygonPoints = buildPolygon(data, effectiveYMin, effectiveYMax);
-  const lastPt = data[data.length - 1];
-  const lastX = lastPt ? idxToX(data.length - 1, data.length) : 0;
-  const lastY = lastPt ? valToY(lastPt.value, effectiveYMin, effectiveYMax) : SVG_H;
-
   const thresholdSvgY = thresholdY != null ? valToY(thresholdY, effectiveYMin, effectiveYMax) : null;
 
   const yLbls = yLabels(effectiveYMin, effectiveYMax, 3);
-  const xLbls = xLabels(data, 5);
+  const xLbls = xLabels(5, maxTsAgo);
+
+  // Clamp tooltip left to prevent sticking out of card
+  const tooltipLeft = bodyRef.current && hover
+    ? Math.max(55, Math.min(bodyRef.current.getBoundingClientRect().width - 55, hover.pxX))
+    : hover?.pxX;
 
   return (
     <div className="sensor-chart-root">
       <div className="sensor-chart-axes">
-        {/* Y-Axis */}
+        {/* Y-Axis (Fixed, Static Values) */}
         <div className="sensor-chart-y">
           {yLbls.map((v, i) => (
             <span key={i}>
@@ -177,90 +207,103 @@ export default function SensorChart({
               </clipPath>
             </defs>
 
-            {/* Grid lines */}
-            {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => (
-              <line
-                key={i}
-                x1={0} y1={frac * SVG_H}
-                x2={SVG_W} y2={frac * SVG_H}
-                stroke="#2a3038" strokeWidth="0.6"
-              />
-            ))}
-
-            {/* Threshold line */}
-            {thresholdSvgY != null && (
-              <line
-                x1={0} y1={thresholdSvgY}
-                x2={SVG_W} y2={thresholdSvgY}
-                stroke="#ef5350" strokeWidth="0.9" strokeDasharray="5 3"
-                opacity="0.7"
-              />
-            )}
-
-            {/* Area gradient */}
-            <polygon points={polygonPoints} fill={`url(#${gradId})`} clipPath={`url(#${clipId})`} />
-
-            {/* Main line */}
-            <polyline
-              points={polyPoints}
-              fill="none"
-              stroke={color}
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
-
-            {/* Cursor guideline */}
-            {hover && (
-              <line
-                className="sensor-cursor-line"
-                x1={idxToX(hover.idx, data.length)} y1={0}
-                x2={idxToX(hover.idx, data.length)} y2={SVG_H}
-                stroke="rgba(255,255,255,0.18)" strokeWidth="1"
-                strokeDasharray="3 2"
-              />
-            )}
-
-            {/* Data dots */}
-            {data.map((pt, i) => {
-              const cx = idxToX(i, data.length);
-              const cy = valToY(pt.value, effectiveYMin, effectiveYMax);
-              const isLast = i === data.length - 1;
-              const isHovered = hover?.idx === i;
-              const r = isHovered ? 4.5 : isLast ? 3 : 2.5;
-              return (
-                <g key={i}>
-                  {/* Pulse ring for latest point */}
-                  {isLast && (
-                    <circle
-                      cx={cx} cy={cy} r={3}
-                      fill="none" stroke={color} strokeWidth="1.2"
-                      className="sensor-dot--pulse-ring"
-                      opacity="0.7"
-                    />
-                  )}
-                  <circle
-                    cx={cx} cy={cy}
-                    r={r}
-                    fill={isHovered || isLast ? color : 'rgba(255, 255, 255, 0.08)'}
-                    stroke={color}
-                    strokeWidth={isHovered ? 1.8 : 1.2}
-                    className={`sensor-dot${isHovered ? ' sensor-dot--hover' : ''}`}
-                    style={{ '--dot-color': color }}
-                    opacity={isHovered || isLast ? 1 : 0.85}
+            <g clipPath={`url(#${clipId})`}>
+              {/* Grid lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => {
+                const lineY = PAD_Y + frac * (SVG_H - PAD_Y * 2);
+                return (
+                  <line
+                    key={i}
+                    x1={0} y1={lineY}
+                    x2={SVG_W} y2={lineY}
+                    stroke="#2a3038" strokeWidth="0.6"
                   />
-                </g>
-              );
-            })}
+                );
+              })}
+
+              {/* Threshold line */}
+              {thresholdSvgY != null && (
+                <line
+                  x1={0} y1={thresholdSvgY}
+                  x2={SVG_W} y2={thresholdSvgY}
+                  stroke="#ef5350" strokeWidth="0.9" strokeDasharray="5 3"
+                  opacity="0.7"
+                />
+              )}
+
+              {/* Area gradient */}
+              <polygon points={polygonPoints} fill={`url(#${gradId})`} />
+
+              {/* Main line */}
+              <polyline
+                points={polyPoints}
+                fill="none"
+                stroke={color}
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+
+              {/* Cursor guideline */}
+              {hover && (
+                <line
+                  className="sensor-cursor-line"
+                  x1={idxToX(hover.idx, data.length)} y1={0}
+                  x2={idxToX(hover.idx, data.length)} y2={SVG_H}
+                  stroke="rgba(255,255,255,0.18)" strokeWidth="1"
+                  strokeDasharray="3 2"
+                />
+              )}
+
+              {/* Data dots rendered as aspect-ratio corrected ellipses (perfect circles on screen) */}
+              {data.map((pt, i) => {
+                const cx = idxToX(i, data.length);
+                const cy = valToY(pt.value, effectiveYMin, effectiveYMax);
+                const isLast = i === data.length - 1;
+                const isHovered = hover?.idx === i;
+                const targetPixelRadius = isHovered ? 4.5 : isLast ? 3 : 2.5;
+
+                const rx = targetPixelRadius / scaleX;
+                const ry = targetPixelRadius / scaleY;
+
+                const pulseRx = 6.5 / scaleX;
+                const pulseRy = 6.5 / scaleY;
+
+                return (
+                  <g key={i}>
+                    {/* Pulse ring for latest point */}
+                    {isLast && (
+                      <ellipse
+                        cx={cx} cy={cy}
+                        rx={pulseRx} ry={pulseRy}
+                        fill="none" stroke={color} strokeWidth="1.2"
+                        className="sensor-dot--pulse-ring"
+                        opacity="0.7"
+                      />
+                    )}
+                    <ellipse
+                      cx={cx} cy={cy}
+                      rx={rx} ry={ry}
+                      fill={isHovered || isLast ? color : 'rgba(255, 255, 255, 0.08)'}
+                      stroke={color}
+                      strokeWidth={isHovered ? 1.8 : 1.2}
+                      className={`sensor-dot${isHovered ? ' sensor-dot--hover' : ''}`}
+                      style={{ '--dot-color': color }}
+                      opacity={isHovered || isLast ? 1 : 0.85}
+                    />
+                  </g>
+                );
+              })}
+            </g>
           </svg>
 
-          {/* Floating tooltip — flips below point when point is in top 35% of chart */}
+          {/* Floating tooltip */}
           {hover && (
             <div
               className="sensor-tooltip"
               style={{
-                left: hover.pxX,
+                left: tooltipLeft,
                 top: hover.pxYFrac < 0.35 ? hover.pxY + 12 : hover.pxY,
                 borderColor: color,
                 transform: hover.pxYFrac < 0.35
@@ -269,7 +312,7 @@ export default function SensorChart({
               }}
             >
               <span className="sensor-tooltip__value" style={{ color }}>
-                {hover.value.toFixed ? hover.value.toFixed(decimals) : hover.value} {unit}
+                {hover.value?.toFixed ? hover.value.toFixed(decimals) : hover.value} {unit}
               </span>
               <span className="sensor-tooltip__sep">·</span>
               <span className="sensor-tooltip__time">
@@ -289,9 +332,9 @@ export default function SensorChart({
             </div>
           )}
 
-          {/* X Axis */}
+          {/* X Axis (Fixed, Static Steps) */}
           <div className="sensor-chart-x">
-            {xLabels(data, 5).map((lbl, i) => <span key={i}>{lbl}</span>)}
+            {xLbls.map((lbl, i) => <span key={i}>{lbl}</span>)}
           </div>
         </div>
       </div>

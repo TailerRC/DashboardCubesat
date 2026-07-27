@@ -1,9 +1,17 @@
 .orientacion3d-view {
   display: flex;
-  gap: 24px;
-  height: 100%;
+  flex-direction: column;
+  gap: 20px;
+  min-height: auto;
   width: 100%;
-  overflow: hidden;
+  padding-bottom: 30px;
+}
+
+.orientacion3d-top-layout {
+  display: flex;
+  gap: 20px;
+  min-height: auto;
+  align-items: stretch;
 }
 
 .visor-column {
@@ -15,29 +23,29 @@
 
 .controls-column {
   flex: 1.2;
-  min-width: 350px;
+  min-width: 340px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  /* hide scrollbar for sleekness if needed, or style it */
+  gap: 12px;
 }
 
 .visor-title {
-  font-size: 16px;
+  font-size: 15px;
   color: #fff;
-  margin: 0 0 12px 0;
-  font-weight: 500;
+  margin: 0 0 10px 0;
+  font-weight: 600;
 }
 
-/* Visor con recuadros en las esquinas según la imagen */
+/* Visor con recuadros en las esquinas */
 .visor-container-frame {
   flex: 1;
+  min-height: 540px;
   border: 1px solid #4a5460;
   background-color: #111;
   position: relative;
   display: flex;
   padding: 4px;
+  border-radius: 6px;
 }
 
 .visor-canvas-wrapper {
@@ -45,13 +53,14 @@
   background-color: #1a1a1a;
   position: relative;
   overflow: hidden;
+  border-radius: 4px;
 }
 
 .corner-tl, .corner-tr, .corner-bl, .corner-br {
   position: absolute;
   width: 20px;
   height: 20px;
-  border-color: #fff;
+  border-color: #4fc3f7;
   border-style: solid;
   border-width: 0;
   z-index: 10;
@@ -63,20 +72,26 @@
 .corner-br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
 
 /* Paneles Laterales */
-.panel-card {
+.orientacion3d-view .panel-card {
   background-color: #1a1e23;
   border: 1px solid #2a3038;
-  border-radius: 6px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
+  position: relative;
+  flex: 0 0 auto;
+  transition: border-color 0.2s;
 }
+.orientacion3d-view .panel-card:hover { border-color: #3a4050; }
 
 .panel-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #e0e0e0;
-  margin: 0 0 16px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* Euler Panel */
@@ -84,20 +99,23 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .euler-label {
   font-size: 12px;
   color: #a0aab5;
-  width: 60px;
+  width: 70px;
+  display: flex;
+  align-items: center;
 }
 
 .euler-bar-track {
   flex: 1;
   height: 8px;
-  background-color: #333;
+  background-color: #2a3038;
   border-radius: 4px;
+  overflow: hidden;
 }
 
 .euler-bar {
@@ -106,56 +124,72 @@
   transition: width 0.1s linear;
 }
 
-.red-fill { background-color: #f44336; }
-.green-fill { background-color: #4caf50; }
-.blue-fill { background-color: #2196f3; }
+.red-fill { background-color: #ef5350; }
+.green-fill { background-color: #66bb6a; }
+.blue-fill { background-color: #4fc3f7; }
 
 .euler-value {
   font-size: 12px;
   color: #fff;
-  width: 45px;
+  width: 50px;
   text-align: right;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.drift-badge-small {
+  font-size: 8px;
+  color: #ffb74d;
+  background: rgba(255, 183, 77, 0.12);
+  border: 1px solid rgba(255, 183, 77, 0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-top: 2px;
 }
 
 /* Movement Panel */
 .sensor-category {
-  font-size: 10px;
-  color: #88929c;
-  margin-bottom: 6px;
+  font-size: 9.5px;
+  color: #6b7280;
+  margin-bottom: 4px;
   text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .sensor-grid {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.sensor-grid:last-child {
+  margin-bottom: 0;
 }
 
 .sensor-box {
   flex: 1;
-  border: 1px solid #4a5460;
+  border: 1px solid #2a3038;
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
-  padding: 4px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   font-size: 11px;
 }
-.sensor-box span:first-child { color: #a0aab5; margin-bottom: 4px; }
-.sensor-box span:last-child { color: #fff; font-weight: bold; }
+.sensor-box span:first-child { color: #a0aab5; margin-bottom: 1px; font-size: 9.5px; }
+.sensor-box span:last-child { color: #fff; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
 
 /* Manual Control Panel */
 .slider-row {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .slider-label {
   font-size: 12px;
   color: #a0aab5;
-  width: 60px;
+  width: 70px;
 }
 
 .styled-slider {
@@ -190,12 +224,12 @@
 
 .mode-btn {
   flex: 1;
-  padding: 10px 0;
+  padding: 8px 0;
   background-color: #111418;
   border: 1px solid #3a424e;
   color: #a0aab5;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
@@ -215,4 +249,15 @@
   background-color: rgba(255, 255, 255, 0.1);
   border-color: #fff;
   color: #fff;
+}
+
+/* Bottom Realtime Charts Grid */
+.charts-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.chart-card-small {
+  min-height: 180px;
 }

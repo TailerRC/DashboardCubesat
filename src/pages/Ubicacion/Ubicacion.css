@@ -161,7 +161,7 @@
 }
 
 /* ─── Panel Card (shared by all 4 panels in rows 2+3) ─── */
-.panel-card {
+.ubicacion-view .panel-card {
   flex: 1;
   background-color: #1a1e23;
   border-radius: 8px;
@@ -174,7 +174,7 @@
   min-width: 0;
   transition: border-color 0.2s;
 }
-.panel-card:hover { border-color: #3a4050; }
+.ubicacion-view .panel-card:hover { border-color: #3a4050; }
 
 .ubi-panel-header {
   font-size: 10px;
