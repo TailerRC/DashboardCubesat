@@ -3,7 +3,7 @@
 // To switch to a live broker (e.g. HiveMQ over WebSockets), set USE_REAL_MQTT to true
 // and configure the broker URL.
 
-const USE_REAL_MQTT = false;
+const USE_REAL_MQTT = true;
 const REAL_MQTT_BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt';
 
 class MqttBroker {

@@ -3,6 +3,9 @@ import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
 import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
 import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
 import { useComunicacionMqtt } from '../../mqtt/paquete_mqtt/useComunicacionMqtt';
+import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
+import CubesatVisor3D from '../../components/3d/CubesatVisor3D';
+import MapaOrbital from '../../components/map/MapaOrbital';
 import './VistaGeneral.css';
 
 export default function VistaGeneral() {
@@ -11,6 +14,7 @@ export default function VistaGeneral() {
   const { data: satData } = useSateliteMqtt();
   const { faseUI } = useMisionMqtt();
   const { data: commData } = useComunicacionMqtt();
+  const { data: orientData } = useOrientacion3DMqtt();
 
   // Safety values checks with robust fallbacks
   const co2Val = ambSensors.co2_ppm?.v !== undefined ? ambSensors.co2_ppm.v.toFixed(2) : '---';
@@ -62,6 +66,7 @@ export default function VistaGeneral() {
       label: 'FASE DE MISIÓN',
       color: '#4caf50',
       isText: true,
+      isLarge: true,
     },
     {
       icon: <i className="fa-solid fa-box"></i>,
@@ -74,32 +79,32 @@ export default function VistaGeneral() {
 
   // Dynamic Safety Banner
   let statusLabel = 'SIN DATOS';
-  let detailText  = 'CONECTANDO CON SATÉLITE...';
+  let detailText = 'CONECTANDO CON SATÉLITE...';
   let bannerClass = 'security-banner--info';
-  let iconClass   = 'fa-circle-info';
+  let iconClass = 'fa-circle-info';
 
   if (isConnected) {
     const count = activeAlerts.length;
     if (estadoAmbiental === 'ANOMALIA') {
       statusLabel = 'ANOMALÍA';
-      detailText  = 'ALERTA: DESCOMPRESIÓN RÁPIDA DETECTADA (PA/S CAÍDA)';
+      detailText = 'ALERTA: DESCOMPRESIÓN RÁPIDA DETECTADA (PA/S CAÍDA)';
       bannerClass = 'security-banner--danger';
-      iconClass   = 'fa-gauge-high fa-fade';
+      iconClass = 'fa-gauge-high fa-fade';
     } else if (count === 0) {
       statusLabel = 'SEGURO';
-      detailText  = 'TODOS LOS PARAMETROS EN RANGO NORMAL';
+      detailText = 'TODOS LOS PARAMETROS EN RANGO NORMAL';
       bannerClass = 'security-banner--ok';
-      iconClass   = 'fa-circle-check';
+      iconClass = 'fa-circle-check';
     } else if (count <= 3) {
       statusLabel = 'EN RIESGO';
-      detailText  = `PARÁMETROS FUERA DEL UMBRAL: ${activeAlerts.join(', ')}`;
+      detailText = `PARÁMETROS FUERA DEL UMBRAL: ${activeAlerts.join(', ')}`;
       bannerClass = 'security-banner--warning';
-      iconClass   = 'fa-triangle-exclamation';
+      iconClass = 'fa-triangle-exclamation';
     } else {
       statusLabel = 'CRÍTICO';
-      detailText  = `PARÁMETROS FUERA DEL UMBRAL: ${activeAlerts.join(', ')}`;
+      detailText = `PARÁMETROS FUERA DEL UMBRAL: ${activeAlerts.join(', ')}`;
       bannerClass = 'security-banner--danger';
-      iconClass   = 'fa-triangle-exclamation fa-fade';
+      iconClass = 'fa-triangle-exclamation fa-fade';
     }
   }
 
@@ -119,10 +124,37 @@ export default function VistaGeneral() {
         </div>
       </section>
 
+      {/* Visores 3D en Tiempo Real */}
+      <section className="visor-general-row">
+        <div className="panel-card visor-card premium-card-hover" style={{ '--card-color': '#00e5ff' }}>
+          <h4 className="card-label-3d">
+            <i className="fa-solid fa-cube" style={{ marginRight: '6px', color: '#00e5ff' }}></i>
+            Estructura Interna del Cubesat (Sensores / Paracaídas)
+          </h4>
+          <div className="visor-3d-wrapper">
+            <CubesatVisor3D
+              cabeceo={orientData.cabeceo_deg?.v ?? 0}
+              balanceo={orientData.balanceo_deg?.v ?? 0}
+              giro={orientData.giro_yaw_deg?.v ?? 0}
+            />
+          </div>
+        </div>
+
+        <div className="panel-card visor-card premium-card-hover" style={{ '--card-color': '#38bdf8' }}>
+          <h4 className="card-label-3d">
+            <i className="fa-solid fa-map-location-dot" style={{ marginRight: '6px', color: '#38bdf8' }}></i>
+            Posicionamiento Orbital
+          </h4>
+          <div className="visor-3d-wrapper">
+            <MapaOrbital />
+          </div>
+        </div>
+      </section>
+
       {/* Data Cards */}
       <section className="data-cards">
         {cards.map((card, i) => (
-          <div key={i} className="data-card premium-card-hover" style={{ '--card-color': card.color }}>
+          <div key={i} className={`data-card premium-card-hover ${card.isLarge ? 'data-card--span-2' : ''}`} style={{ '--card-color': card.color }}>
             <div className="card-icon" style={{ color: card.color }}>
               {card.icon}
             </div>

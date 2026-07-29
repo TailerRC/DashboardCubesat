@@ -4,6 +4,50 @@
   gap: 20px;
 }
 
+/* ── 3D Visor Row ── */
+.visor-general-row {
+  display: flex;
+  gap: 20px;
+  height: 330px;
+  flex-shrink: 0;
+}
+
+.visor-card {
+  flex: 1;
+  min-width: 0;
+  background-color: #1a1e23;
+  border: 1px solid #2a2d35;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.card-label-3d {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8b8fa3;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.visor-3d-wrapper {
+  flex: 1;
+  min-height: 0;
+  background-color: #111318;
+  border: 1px solid #2a2d35;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+
 /* ── Security Status ── */
 .security-status {
   background: #1a1d23;
@@ -84,6 +128,10 @@
   gap: 14px;
 }
 
+.data-card--span-2 {
+  grid-column: span 2;
+}
+
 .data-card {
   background: #1a1d23;
   border: 1px solid #2a2d35;
@@ -157,8 +205,22 @@
   }
 }
 
+@media (max-width: 1000px) {
+  .visor-general-row {
+    flex-direction: column;
+    height: auto;
+    gap: 16px;
+  }
+  .visor-card {
+    height: 320px;
+  }
+}
+
 @media (max-width: 600px) {
   .data-cards {
     grid-template-columns: 1fr;
+  }
+  .data-card--span-2 {
+    grid-column: span 1;
   }
 }

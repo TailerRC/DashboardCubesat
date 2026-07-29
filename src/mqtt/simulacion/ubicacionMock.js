@@ -6,11 +6,11 @@ import { MqttService } from '../config/mqttConfig';
 
 const TOPIC = 'cempai/cubesat/telemetry/ubicacion';
 
-// Launch/Landing constants
-const LAUNCH_LAT = -12.4300;
-const LAUNCH_LON = -77.2100;
-const LAND_LAT = -12.4123;
-const LAND_LON = -77.2078;
+// Launch/Landing constants (San Miguel, Lima, Peru)
+const LAUNCH_LAT = -12.0850;
+const LAUNCH_LON = -77.0900;
+const LAND_LAT = -12.0780;
+const LAND_LON = -77.0850;
 
 // Running states
 let packetId = 2000;

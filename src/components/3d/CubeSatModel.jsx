@@ -4,7 +4,7 @@ import './CubeSatModel.css';
 
 const CubeSatModel = ({ cabeceo = 0, balanceo = 0, giro = 0, modo = 'AUTO', onAutoUpdate }) => {
   const mountRef = useRef(null);
-  
+
   const cubeRef = useRef(null);
   const modoRef = useRef(modo);
   const rotRef = useRef({ cabeceo, balanceo, giro });
@@ -19,7 +19,7 @@ const CubeSatModel = ({ cabeceo = 0, balanceo = 0, giro = 0, modo = 'AUTO', onAu
   useEffect(() => {
     // 0. Limpieza brutal: asegurar que el contenedor esté vacío antes de inicializar
     if (mountRef.current) {
-       mountRef.current.innerHTML = '';
+      mountRef.current.innerHTML = '';
     }
 
     const scene = new THREE.Scene();
@@ -34,7 +34,7 @@ const CubeSatModel = ({ cabeceo = 0, balanceo = 0, giro = 0, modo = 'AUTO', onAu
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
-    
+
     // Asignamos una clase específica al canvas generado por Three.js para asegurarnos
     renderer.domElement.className = 'three-canvas';
     mountRef.current.appendChild(renderer.domElement);
@@ -68,7 +68,7 @@ const CubeSatModel = ({ cabeceo = 0, balanceo = 0, giro = 0, modo = 'AUTO', onAu
 
     scene.add(cube);
     cubeRef.current = cube;
-    
+
     const gridHelper = new THREE.GridHelper(40, 40, 0x333333, 0x222222);
     gridHelper.position.y = -8;
     scene.add(gridHelper);
@@ -97,10 +97,10 @@ const CubeSatModel = ({ cabeceo = 0, balanceo = 0, giro = 0, modo = 'AUTO', onAu
 
         // Feedback al React UI (Limitar frecuencia si es necesario, pero requestAFrame corre bien)
         if (callbackRef.current) {
-           const normC = normalizeAngle(cube.rotation.x);
-           const normG = normalizeAngle(cube.rotation.y);
-           const normB = normalizeAngle(cube.rotation.z);
-           callbackRef.current(normC, normB, normG);
+          const normC = normalizeAngle(cube.rotation.x);
+          const normG = normalizeAngle(cube.rotation.y);
+          const normB = normalizeAngle(cube.rotation.z);
+          callbackRef.current(normC, normB, normG);
         }
       } else {
         cube.rotation.x = c * toRad;

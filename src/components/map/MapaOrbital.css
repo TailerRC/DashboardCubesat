@@ -1,0 +1,212 @@
+/* ── Contenedor principal ──────────────────────────────────────────── */
+.mapa-orbital-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mapa-orbital-map {
+  width: 100%;
+  height: 100%;
+}
+
+.mapa-orbital-map .leaflet-container {
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ── Pin de Lima (verde con pulso animado) ────────────────────────── */
+.mapa-pin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+}
+
+.mapa-pin--lima .mapa-pin__dot {
+  width: 14px;
+  height: 14px;
+  background: #00ff66;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px #00ff66, 0 0 22px rgba(0, 255, 102, 0.55);
+  position: relative;
+  z-index: 2;
+}
+
+.mapa-pin--lima .mapa-pin__pulse {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 255, 102, 0.28);
+  animation: pinPulse 2s ease-out infinite;
+  z-index: 1;
+}
+
+@keyframes pinPulse {
+  0%   { transform: scale(0.5); opacity: 0.9; }
+  100% { transform: scale(2.0); opacity: 0;   }
+}
+
+/* ── Dot animado "obteniendo ubicación…" ─────────────────────────── */
+.mapa-loading-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #00ff66;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  animation: loadingPulse 1s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+/* ── Pin de click (celeste) ───────────────────────────────────────── */
+.mapa-pin--click .mapa-pin__dot {
+  width: 12px;
+  height: 12px;
+  background: #38bdf8;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 7px #38bdf8, 0 0 16px rgba(56, 189, 248, 0.5);
+}
+
+/* ── Popup base de Leaflet (wrapper) ──────────────────────────────── */
+.mapa-popup-wrapper .leaflet-popup-content-wrapper {
+  background: rgba(12, 16, 22, 0.96) !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mapa-popup-wrapper.mapa-popup-wrapper--green .leaflet-popup-content-wrapper {
+  border-color: rgba(0, 255, 102, 0.35) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55),
+              0 0 18px rgba(0, 255, 102, 0.1) !important;
+}
+
+.mapa-popup-wrapper.mapa-popup-wrapper--blue .leaflet-popup-content-wrapper {
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55),
+              0 0 18px rgba(56, 189, 248, 0.1) !important;
+}
+
+.mapa-popup-wrapper .leaflet-popup-content {
+  margin: 0 !important;
+  font-family: 'JetBrains Mono', 'Courier New', monospace !important;
+}
+
+/* Flecha del popup */
+.mapa-popup-wrapper .leaflet-popup-tip-container {
+  display: block;
+}
+
+.mapa-popup-wrapper.mapa-popup-wrapper--green .leaflet-popup-tip {
+  background: rgba(12, 16, 22, 0.96) !important;
+}
+
+.mapa-popup-wrapper.mapa-popup-wrapper--blue .leaflet-popup-tip {
+  background: rgba(12, 16, 22, 0.96) !important;
+}
+
+/* Botón X de cierre */
+.mapa-popup-wrapper .leaflet-popup-close-button {
+  color: #9ca3af !important;
+  font-size: 18px !important;
+  font-weight: 300 !important;
+  top: 6px !important;
+  right: 8px !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  transition: color 0.15s;
+}
+
+.mapa-popup-wrapper .leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+  background: none !important;
+}
+
+/* ── Contenido interno del popup ──────────────────────────────────── */
+.mapa-popup {
+  padding: 12px 36px 12px 14px; /* derecha extra para la X */
+  min-width: 190px;
+}
+
+.mapa-popup__header {
+  margin-bottom: 6px;
+}
+
+.mapa-popup__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.mapa-popup__coords {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: #d1d5db;
+  letter-spacing: 0.4px;
+}
+
+.mapa-popup__coords strong {
+  color: #e5e7eb;
+}
+
+.mapa-popup__accuracy {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+
+.mapa-popup__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* ── Controles de zoom (tema oscuro) ──────────────────────────────── */
+.leaflet-control-zoom {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(12, 16, 22, 0.85) !important;
+  color: #e5e7eb !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #38bdf8 !important;
+}
+
+/* ── Atribución ───────────────────────────────────────────────────── */
+.leaflet-control-attribution {
+  background: rgba(9, 13, 18, 0.75) !important;
+  color: #6b7280 !important;
+  font-size: 9px !important;
+  border-radius: 4px 0 0 0 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #9ca3af !important;
+}

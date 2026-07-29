@@ -1,72 +1,111 @@
+import { useEffect, useRef } from 'react';
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import './Ubicacion.css';
 
-// Launch constants for geodetic reference
-const LAUNCH_LAT = -12.4300;
-const LAUNCH_LON = -77.2100;
+// Launch constants for geodetic reference (San Miguel, Lima)
+const LAUNCH_LAT = -12.0850;
+const LAUNCH_LON = -77.0900;
 
 export default function Ubicacion() {
   const { data, lastPacketId } = useUbicacionMqtt();
 
-  // 1. LAT/LON → Relative Meters Conversion (Launch pad at 0,0)
-  const latVal = data.latitud.v;
-  const lonVal = data.longitud.v;
+  const isStale = data.latitud.stale;
 
-  const cosLat0 = Math.cos(LAUNCH_LAT * Math.PI / 180);
-  const Y_METERS_PER_DEG = 110540;
-  const X_METERS_PER_DEG = 111320 * cosLat0;
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const polylineRef = useRef(null);
 
-  // Current position in meters relative to launch pad
-  const currentX = (lonVal - LAUNCH_LON) * X_METERS_PER_DEG;
-  const currentY = (latVal - LAUNCH_LAT) * Y_METERS_PER_DEG;
-
-  // Map history to meters
-  const latHist = data.latitud.history || [];
-  const lonHist = data.longitud.history || [];
-  
-  const historyMeters = latHist.map((pt, idx) => {
-    const lat = pt.value;
-    const lon = lonHist[idx]?.value ?? LAUNCH_LON;
-    return {
-      x: (lon - LAUNCH_LON) * X_METERS_PER_DEG,
-      y: (lat - LAUNCH_LAT) * Y_METERS_PER_DEG
-    };
+  // Custom satellite icon for Leaflet using FontAwesome
+  const satelliteIcon = L.divIcon({
+    html: `
+      <div class="leaflet-satellite-marker">
+        <i class="fa-solid fa-satellite"></i>
+        <span class="pulse-ring"></span>
+      </div>
+    `,
+    className: 'custom-leaflet-marker',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
   });
 
-  // Calculate dynamic axis range scale (symmetrical 1:1 aspect ratio)
-  // Auto-zooms strictly around launch origin, flight trail, and current coordinates
-  const allCoords = [
-    { x: 0, y: 0 },
-    { x: currentX, y: currentY },
-    ...historyMeters
-  ];
-  
-  const maxAbsCoord = Math.max(...allCoords.flatMap(pt => [Math.abs(pt.x), Math.abs(pt.y)]));
-  const rangeLimit = Math.max(50, maxAbsCoord * 1.25); // At least 50 meters, plus 25% margin
+  // Initialize Map
+  useEffect(() => {
+    if (!mapRef.current) return;
 
-  // Viewport coordinate mapping function: maps meters to [20, 180] inside a viewBox of 0-200
-  // Center is (100, 100), layout radius is 80 units
-  const scale = 80 / rangeLimit;
-  
-  const mapToSvg = (x, y) => {
-    const svgX = 100 + x * scale;
-    const svgY = 100 - y * scale; // invert Y since SVG goes downwards
-    return { x: svgX, y: svgY };
-  };
+    // Center on San Miguel, Lima
+    const map = L.map(mapRef.current, {
+      center: [-12.0850, -77.0900],
+      zoom: 15,
+      zoomControl: true,
+      attributionControl: false
+    });
 
-  // Convert current coordinates to SVG viewBox coords
-  const svgCurrent = mapToSvg(currentX, currentY);
+    // Dark thematic map style from CartoDB (perfect for dark dashboard)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+    }).addTo(map);
 
-  // Build trail polyline coordinates
-  const trailPoints = historyMeters
-    .map(pt => {
-      const mapped = mapToSvg(pt.x, pt.y);
-      return `${mapped.x.toFixed(1)},${mapped.y.toFixed(1)}`;
-    })
-    .join(' ');
+    // Current location marker
+    const marker = L.marker([-12.0850, -77.0900], { icon: satelliteIcon })
+      .addTo(map)
+      .bindPopup('<b>Cubesat CEMPAI</b><br>GPS: u-blox NEO-7M<br>Estableciendo señal...');
 
-  const isStale = data.latitud.stale;
+    // Path trail line
+    const polyline = L.polyline([], {
+      color: '#00e676',
+      weight: 3,
+      opacity: 0.85
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+    markerRef.current = marker;
+    polylineRef.current = polyline;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+      polylineRef.current = null;
+    };
+  }, []);
+
+  // Update marker and trail position
+  useEffect(() => {
+    const lat = data.latitud.v;
+    const lon = data.longitud.v;
+    const map = mapInstanceRef.current;
+    const marker = markerRef.current;
+    const polyline = polylineRef.current;
+
+    if (!map || !marker || !polyline) return;
+
+    // Pan map and set marker position
+    marker.setLatLng([lat, lon]);
+    map.panTo([lat, lon]);
+
+    marker.getPopup().setContent(`
+      <div class="map-popup-content">
+        <b style="color: #4fc3f7; font-size: 13px; font-weight: bold;">CUBESAT CEMPAI (NEO-7M)</b><br/>
+        <b>Lat:</b> ${lat.toFixed(6)}°<br/>
+        <b>Lon:</b> ${lon.toFixed(6)}°<br/>
+        <b>Altitud:</b> ${data.altitud_gps.v.toFixed(1)} m<br/>
+        <b>Velocidad:</b> ${data.velocidad_kmh.v.toFixed(1)} km/h<br/>
+        <b>Satélites:</b> ${data.satelites.v} visibles<br/>
+        <b>HDOP:</b> ${data.hdop.v.toFixed(1)}
+      </div>
+    `);
+
+    // Historial de trayectoria
+    const latHist = data.latitud.history || [];
+    const lonHist = data.longitud.history || [];
+    const points = latHist.map((pt, idx) => [pt.value, lonHist[idx]?.value || pt.value]);
+    
+    polyline.setLatLngs(points);
+  }, [data]);
 
   // 2. Dynamic Y-Axis scale for Altitud GPS
   const altHist = data.altitud_gps.history || [];
@@ -99,144 +138,14 @@ export default function Ubicacion() {
   return (
     <div className={`ubicacion-view ${isStale ? 'view-stale' : ''}`}>
 
-      {/* ── FILA 1: Trayectoria Relativa al Lanzamiento ── */}
+      {/* ── FILA 1: Mapa Geográfico Real ── */}
       <section className="ubi-row ubi-row--map">
         <div className="map-panel premium-card-hover" style={{ '--card-color': '#2196f3' }}>
-          <div className="map-grid-bg map-grid-bg--cartesian">
-            
-            <div className="cartesian-plot-container">
-              {/* SVG 4-Quadrant Cartesian Scatter Plot */}
-              <svg className="cartesian-svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
-                
-                {/* 1. Radar concentric circle grid lines (at 33%, 66% and 100% of scale) */}
-                <circle cx="100" cy="100" r={rangeLimit * 0.33 * scale} fill="none" stroke="#1f262e" strokeWidth="0.5" strokeDasharray="2 2"/>
-                <circle cx="100" cy="100" r={rangeLimit * 0.66 * scale} fill="none" stroke="#1f262e" strokeWidth="0.5" strokeDasharray="2 2"/>
-                <circle cx="100" cy="100" r={rangeLimit * scale} fill="none" stroke="#1f262e" strokeWidth="0.7"/>
-
-                {/* 2. Main Ejes Cartesianos */}
-                <line x1="15" y1="100" x2="185" y2="100" stroke="#2e3844" strokeWidth="0.7"/>
-                <line x1="100" y1="15" x2="100" y2="185" stroke="#2e3844" strokeWidth="0.7"/>
-
-                {/* Diagonal rumbo guidelines (45°, 135°, 225°, 315°) */}
-                <line x1="100" y1="100" x2="156.6" y2="43.4" stroke="#181e24" strokeWidth="0.5" strokeDasharray="1.5 1.5"/>
-                <line x1="100" y1="100" x2="156.6" y2="156.6" stroke="#181e24" strokeWidth="0.5" strokeDasharray="1.5 1.5"/>
-                <line x1="100" y1="100" x2="43.4" y2="156.6" stroke="#181e24" strokeWidth="0.5" strokeDasharray="1.5 1.5"/>
-                <line x1="100" y1="100" x2="43.4" y2="43.4" stroke="#181e24" strokeWidth="0.5" strokeDasharray="1.5 1.5"/>
-
-                {/* Direction Arrows */}
-                <path d="M 185,100 L 181,98 L 181,102 Z" fill="#2e3844" />
-                <path d="M 100,15 L 98,19 L 102,19 Z" fill="#2e3844" />
-
-                {/* Edge direction labels */}
-                <text x="100" y="11" fill="#4caf50" fontSize="9.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">N</text>
-                <text x="100" y="197" fill="#4caf50" fontSize="9.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">S</text>
-                <text x="195" y="103" fill="#4caf50" fontSize="9.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">E</text>
-                <text x="6" y="103" fill="#4caf50" fontSize="9.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">O</text>
-
-                {/* 3. Angular degree labels on outer ring */}
-                <text x="100" y="21" fill="#4b5563" fontSize="5" fontFamily="monospace" textAnchor="middle">0°</text>
-                <text x="160" y="41" fill="#4b5563" fontSize="4.5" fontFamily="monospace" textAnchor="middle">45°</text>
-                <text x="176" y="97.5" fill="#4b5563" fontSize="5" fontFamily="monospace" textAnchor="middle">90°</text>
-                <text x="160" y="164" fill="#4b5563" fontSize="4.5" fontFamily="monospace" textAnchor="middle">135°</text>
-                <text x="100" y="184" fill="#4b5563" fontSize="5" fontFamily="monospace" textAnchor="middle">180°</text>
-                <text x="40" y="164" fill="#4b5563" fontSize="4.5" fontFamily="monospace" textAnchor="middle">225°</text>
-                <text x="24" y="97.5" fill="#4b5563" fontSize="5" fontFamily="monospace" textAnchor="middle">270°</text>
-                <text x="40" y="41" fill="#4b5563" fontSize="4.5" fontFamily="monospace" textAnchor="middle">315°</text>
-
-                {/* 4. Coordinate metric labels along positive/negative X & Y axes */}
-                {/* Y Axis (North +) */}
-                <text x="103" y={100 - (rangeLimit * 0.33 * scale) + 1.8} fill="#4b5563" fontSize="5.5" fontFamily="monospace">
-                  +{(rangeLimit * 0.33).toFixed(0)}m
-                </text>
-                <text x="103" y={100 - (rangeLimit * 0.66 * scale) + 1.8} fill="#4b5563" fontSize="5.5" fontFamily="monospace">
-                  +{(rangeLimit * 0.66).toFixed(0)}m
-                </text>
-                <text x="103" y={100 - (rangeLimit * scale) + 1.8} fill="#6b7280" fontSize="5.5" fontFamily="monospace" fontWeight="bold">
-                  +{rangeLimit.toFixed(0)}m
-                </text>
-
-                {/* Y Axis (South -) */}
-                <text x="103" y={100 + (rangeLimit * 0.33 * scale) + 1.8} fill="#4b5563" fontSize="5.5" fontFamily="monospace">
-                  -{(rangeLimit * 0.33).toFixed(0)}m
-                </text>
-                <text x="103" y={100 + (rangeLimit * 0.66 * scale) + 1.8} fill="#4b5563" fontSize="5.5" fontFamily="monospace">
-                  -{(rangeLimit * 0.66).toFixed(0)}m
-                </text>
-                <text x="103" y={100 + (rangeLimit * scale) + 1.8} fill="#6b7280" fontSize="5.5" fontFamily="monospace" fontWeight="bold">
-                  -{rangeLimit.toFixed(0)}m
-                </text>
-
-                {/* X Axis (East +) */}
-                <text x={100 + (rangeLimit * 0.33 * scale)} y="106.5" fill="#4b5563" fontSize="5.5" fontFamily="monospace" textAnchor="middle">
-                  +{(rangeLimit * 0.33).toFixed(0)}m
-                </text>
-                <text x={100 + (rangeLimit * 0.66 * scale)} y="106.5" fill="#4b5563" fontSize="5.5" fontFamily="monospace" textAnchor="middle">
-                  +{(rangeLimit * 0.66).toFixed(0)}m
-                </text>
-                <text x={100 + (rangeLimit * scale)} y="106.5" fill="#6b7280" fontSize="5.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                  +{rangeLimit.toFixed(0)}m
-                </text>
-
-                {/* X Axis (West -) */}
-                <text x={100 - (rangeLimit * 0.33 * scale)} y="106.5" fill="#4b5563" fontSize="5.5" fontFamily="monospace" textAnchor="middle">
-                  -{(rangeLimit * 0.33).toFixed(0)}m
-                </text>
-                <text x={100 - (rangeLimit * 0.66 * scale)} y="106.5" fill="#4b5563" fontSize="5.5" fontFamily="monospace" textAnchor="middle">
-                  -{(rangeLimit * 0.66).toFixed(0)}m
-                </text>
-                <text x={100 - (rangeLimit * scale)} y="106.5" fill="#6b7280" fontSize="5.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                  -{rangeLimit.toFixed(0)}m
-                </text>
-
-                {/* 5. Launch site marker at center (0, 0) */}
-                <circle cx="100" cy="100" r="3.2" fill="none" stroke="#2196f3" strokeWidth="1.2"/>
-                <line x1="95" y1="100" x2="105" y2="100" stroke="#2196f3" strokeWidth="0.8"/>
-                <line x1="100" y1="95" x2="100" y2="105" stroke="#2196f3" strokeWidth="0.8"/>
-                <text x="96" y="112.5" fill="#2196f3" fontSize="5.5" fontFamily="monospace" fontWeight="bold">LAUNCH</text>
-
-                {/* 6. Actual flight path trail polyline */}
-                {trailPoints && (
-                  <polyline
-                    points={trailPoints}
-                    fill="none"
-                    stroke="#4caf50"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeOpacity="0.85"
-                  />
-                )}
-              </svg>
-
-              {/* Dynamic trajectory trace marker as a perfect HTML circle */}
-              <div
-                className="map-marker-dot"
-                style={{
-                  left: `${(svgCurrent.x / 200) * 100}%`,
-                  top: `${(svgCurrent.y / 200) * 100}%`,
-                  backgroundColor: isStale ? '#ffa726' : '#4caf50'
-                }}
-              ></div>
-
-              {/* Pulsing crosshair overlay at current coordinates */}
-              <div
-                className="radar-circle"
-                style={{
-                  left: `${(svgCurrent.x / 200) * 100}%`,
-                  top: `${(svgCurrent.y / 200) * 100}%`
-                }}
-              >
-                <i className="fa-solid fa-crosshairs fa-spin" style={{ color: isStale ? '#ffa726' : '#4caf50', fontSize: '15px' }}></i>
-              </div>
-            </div>
-            
-          </div>
-
-          {/* Map footer: title + landing coords */}
+          <div className="leaflet-map-wrapper" ref={mapRef}></div>
           <div className="map-footer">
             <span className="map-title-label">
-              <i className="fa-solid fa-route" style={{ marginRight: '6px', color: '#4fc3f7' }}></i>
-              TRAYECTORIA RELATIVA AL LANZAMIENTO
+              <i className="fa-solid fa-earth-americas" style={{ marginRight: '6px', color: '#4fc3f7' }}></i>
+              GEOPOSICIONAMIENTO EN TIEMPO REAL (LIMA - SAN MIGUEL)
             </span>
             <div className="map-footer-right">
               <div className="landing-coords-inline">
