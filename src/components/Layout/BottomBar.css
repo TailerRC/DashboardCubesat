@@ -3,37 +3,111 @@
   align-items: center;
   justify-content: space-between;
   padding: 6px 20px;
-  background: #1a1d23;
-  border-top: 1px solid #2a2d35;
+  background: #111317;
+  border-top: 1px solid #1f2229;
   font-size: 12px;
-  min-height: 32px;
+  min-height: 36px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .bottombar-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.status-separator {
+  color: #2e3440;
+  font-size: 12px;
+  user-select: none;
 }
 
 .status-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+}
+
+.status-icon {
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .status-label {
-  color: #6b7280;
+  color: #9ca3af;
   font-weight: 500;
 }
 
 .status-value {
-  color: #9ca3af;
   font-family: 'Consolas', 'Courier New', monospace;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
+/* Status colors */
 .status-value.ok {
   color: #4caf50;
+}
+
+.status-value.warning {
+  color: #ffb74d;
+}
+
+.status-value.danger {
+  color: #ef5350;
+}
+
+.status-value.offline {
+  color: #6b7280;
+}
+
+/* MQTT Broker status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.broker-status.ok .status-dot {
+  animation: brokerPulse 2s infinite ease-in-out;
+}
+
+@keyframes brokerPulse {
+  0% {
+    opacity: 0.4;
+    box-shadow: 0 0 2px currentColor;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 10px currentColor;
+  }
+  100% {
+    opacity: 0.4;
+    box-shadow: 0 0 2px currentColor;
+  }
+}
+
+/* Packet sub-styles */
+.pkts-status {
+  color: #e5e7eb;
+}
+
+.pkt-rec {
+  color: #4fc3f7;
+}
+
+.pkt-divider {
+  color: #4b5563;
+  margin: 0 3px;
+}
+
+.pkt-lost {
+  color: #f48fb1;
 }
 
 .bottombar-right {
@@ -43,14 +117,15 @@
 }
 
 .station-name {
-  color: #6b7280;
-  font-size: 12px;
-  font-style: italic;
+  color: #4b5563;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
 .bottombar-time {
-  color: #e0e0e0;
+  color: #9ca3af;
   font-family: 'Consolas', 'Courier New', monospace;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
 }
+

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
 import './Sidebar.css';
 
 const navItems = [
@@ -22,6 +23,8 @@ const iconMap = {
 };
 
 export default function Sidebar() {
+  const { faseUI } = useMisionMqtt();
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -43,7 +46,7 @@ export default function Sidebar() {
 
         <div className="mission-phase">
           <span className="phase-label">FASE DE MISIÓN</span>
-          <span className="phase-value">DESCENSO</span>
+          <span className="phase-value">{faseUI || '---'}</span>
         </div>
       </div>
 

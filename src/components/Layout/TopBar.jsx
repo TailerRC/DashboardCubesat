@@ -42,7 +42,6 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
 
   // Safe checks and scaling for active telemetry parameters
   const co2 = ambSensors?.co2_ppm?.v !== undefined ? ambSensors.co2_ppm.v.toFixed(1) : '---';
-  const voc = ambSensors?.gas_voc_ppb?.v !== undefined ? ambSensors.gas_voc_ppb.v.toFixed(1) : '---';
   const tempAmb = ambSensors?.temperatura_c?.v !== undefined ? ambSensors.temperatura_c.v.toFixed(1) : '---';
   const hum = ambSensors?.humedad_pct?.v !== undefined ? ambSensors.humedad_pct.v.toFixed(1) : '---';
   const pres = ambSensors?.presion_pa?.v !== undefined ? ambSensors.presion_pa.v.toFixed(0) : '---';
@@ -73,7 +72,6 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
     { label: 'Latitud:', value: `${lat}°`, color: '#4fc3f7' },
     { label: 'Longitud:', value: `${lon}°`, color: '#4fc3f7' },
     { label: 'CO2:', value: `${co2} ppm`, color: '#f9a825' },
-    { label: 'VOC:', value: `${voc} ppb`, color: '#00bcd4' },
     { label: 'Temp Amb:', value: `${tempAmb} °C`, color: '#ff7043' },
     { label: 'Humedad:', value: `${hum} %`, color: '#03a9f4' },
     { label: 'Presión:', value: `${pres} Pa`, color: '#ab47bc' },

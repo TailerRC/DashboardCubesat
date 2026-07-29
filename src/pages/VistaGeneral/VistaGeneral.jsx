@@ -1,16 +1,19 @@
 import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
 import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
+import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
+import { useComunicacionMqtt } from '../../mqtt/paquete_mqtt/useComunicacionMqtt';
 import './VistaGeneral.css';
 
 export default function VistaGeneral() {
   const { sensors: ambSensors, estadoAmbiental, activeAlerts, isConnected } = useAmbientalMqtt();
   const { data: ubiData } = useUbicacionMqtt();
   const { data: satData } = useSateliteMqtt();
+  const { faseUI } = useMisionMqtt();
+  const { data: commData } = useComunicacionMqtt();
 
   // Safety values checks with robust fallbacks
   const co2Val = ambSensors.co2_ppm?.v !== undefined ? ambSensors.co2_ppm.v.toFixed(2) : '---';
-  const vocVal = ambSensors.gas_voc_ppb?.v !== undefined ? ambSensors.gas_voc_ppb.v.toFixed(2) : '---';
   const tempVal = ambSensors.temperatura_c?.v !== undefined ? ambSensors.temperatura_c.v.toFixed(2) : '---';
   const uvVal = ambSensors.radiacion_uv?.v !== undefined ? ambSensors.radiacion_uv.v.toFixed(2) : '---';
   const altVal = ubiData.altitud_gps?.v !== undefined ? ubiData.altitud_gps.v.toFixed(2) : '---';
@@ -23,13 +26,6 @@ export default function VistaGeneral() {
       unit: 'ppm',
       label: 'CO2',
       color: '#f9a825',
-    },
-    {
-      icon: <i className="fa-solid fa-biohazard"></i>,
-      value: vocVal,
-      unit: 'ppb',
-      label: 'GAS NOCIVO VOC',
-      color: '#00bcd4',
     },
     {
       icon: <i className="fa-solid fa-thermometer-half"></i>,
@@ -61,7 +57,7 @@ export default function VistaGeneral() {
     },
     {
       icon: <i className="fa-solid fa-arrow-trend-down"></i>,
-      value: 'DESCENSO',
+      value: faseUI || '---',
       unit: '',
       label: 'FASE DE MISIÓN',
       color: '#4caf50',
@@ -69,7 +65,7 @@ export default function VistaGeneral() {
     },
     {
       icon: <i className="fa-solid fa-box"></i>,
-      value: '2657',
+      value: commData.paquetes_recibidos?.v !== undefined ? commData.paquetes_recibidos.v : '---',
       unit: 'IX',
       label: 'PAQUETES RECIBIDOS',
       color: '#5c6bc0',

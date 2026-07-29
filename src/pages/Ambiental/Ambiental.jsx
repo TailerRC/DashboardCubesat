@@ -70,10 +70,6 @@ function TutorialModal({ onClose }) {
                   <td>CO₂</td><td>400–1000</td><td>&gt; 1000</td><td>ppm</td>
                 </tr>
                 <tr>
-                  <td><i className="fa-solid fa-biohazard" style={{ color: '#00bcd4' }}></i></td>
-                  <td>Gases VOC</td><td>0–60</td><td>&gt; 60</td><td>ppb</td>
-                </tr>
-                <tr>
                   <td><i className="fa-solid fa-temperature-half" style={{ color: '#ff7043' }}></i></td>
                   <td>Temperatura</td><td>−10–40</td><td>&gt; 40</td><td>°C</td>
                 </tr>
@@ -153,22 +149,6 @@ const GAUGE_INFO = {
     yMax: 5000,
     decimals: 2
   },
-  gas_voc_ppb: {
-    color: '#00bcd4',
-    barClass: 'voc-bar',
-    indicatorPct: (v) => Math.max(0, Math.min(100, (v / 80) * 100)),
-    gaugeLabels: [
-      ['Limpio', '0ppb'],
-      ['Aceptable', '20ppb'],
-      ['Moderado', '40ppb'],
-      ['Alto', '60ppb'],
-      ['Peligroso', '80ppb'],
-    ],
-    threshold: 60,
-    yMin: 0,
-    yMax: 80,
-    decimals: 1
-  },
   temperatura_c: {
     color: '#ff7043',
     barClass: 'temp-bar',
@@ -241,12 +221,6 @@ const SENSOR_META = {
     icon: 'fa-solid fa-smog',
     unit: 'ppm',
     color: '#f9a825'
-  },
-  gas_voc_ppb: {
-    title: 'GASES NOCIVOS (VOC)',
-    icon: 'fa-solid fa-biohazard',
-    unit: 'ppb',
-    color: '#00bcd4'
   },
   temperatura_c: {
     title: 'TEMPERATURA',

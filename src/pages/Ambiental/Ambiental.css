@@ -60,6 +60,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+.ambiental-card:nth-child(5) {
+  grid-column: span 2;
+}
 
 /* ─── Telemetry Card with Charts ─── */
 .ambiental-card {
@@ -229,9 +232,6 @@
 /* Gauge colors */
 .co2-bar {
   background: linear-gradient(to right, #4caf50 0%, #8bc34a 25%, #ffeb3b 50%, #ff9800 75%, #f44336 100%);
-}
-.voc-bar {
-  background: linear-gradient(to right, #4caf50 25%, #8bc34a 45%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
 }
 .temp-bar {
   background: linear-gradient(to right, #1565c0 0%, #42a5f5 30%, #e3f2fd 55%, #ff9800 75%, #f44336 100%);

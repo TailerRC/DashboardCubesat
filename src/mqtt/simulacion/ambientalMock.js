@@ -18,15 +18,6 @@ export const SENSOR_CONFIGS = {
     decimals: 2,
     color: '#f9a825'
   },
-  voc: {
-    label: 'VOC',
-    unit: 'ppb',
-    yMin: 0,
-    yMax: 80,
-    threshold: 60,
-    decimals: 1,
-    color: '#00bcd4'
-  },
   temp: {
     label: 'Temperatura',
     unit: '°C',
@@ -85,20 +76,6 @@ export function getSensorValueAtTime(sensorKey, secondsElapsed) {
       }
       break;
 
-    case 'voc':
-      if (cycleTime < 35) {
-        val = 22 + Math.sin(cycleTime * 0.15) * 5;
-      } else if (cycleTime < 55) {
-        val = 38;
-      } else if (cycleTime < 75) {
-        val = 55.5 + Math.sin((cycleTime - 55) * 0.1) * 2;
-      } else if (cycleTime < 105) {
-        val = 72 + Math.sin((cycleTime - 75) * 0.15) * 4;
-      } else {
-        const ratio = (120 - cycleTime) / 15;
-        val = 22 + ratio * (72 - 22);
-      }
-      break;
 
     case 'temp':
       if (cycleTime < 35) {
@@ -164,7 +141,6 @@ export function getSensorValueAtTime(sensorKey, secondsElapsed) {
 let packetId = 1000;
 let lastPresion = 100500.00; // in Pascals (approx 1005 hPa)
 let co2Val = 405.20;
-let vocVal = 22.40;
 let tempVal = 24.80;
 let uvVal = 1.80;
 let humVal = 55.40;
@@ -196,7 +172,6 @@ function publishNextPacket() {
   if (received) {
     // Generate values directly from flight cycle helper
     co2Val = getSensorValueAtTime('co2', simulatedTimeSecs);
-    vocVal = getSensorValueAtTime('voc', simulatedTimeSecs);
     tempVal = getSensorValueAtTime('temp', simulatedTimeSecs);
     uvVal = getSensorValueAtTime('uv', simulatedTimeSecs);
     humVal = getSensorValueAtTime('hum', simulatedTimeSecs);
@@ -213,7 +188,6 @@ function publishNextPacket() {
 
     data = {
       co2_ppm:       { v: co2Val, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.co2.threshold },
-      gas_voc_ppb:   { v: vocVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.voc.threshold },
       temperatura_c: { v: tempVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.temp.threshold },
       radiacion_uv:  { v: uvVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.uv.threshold },
       humedad_pct:   { v: humVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.hum.threshold },
@@ -223,7 +197,6 @@ function publishNextPacket() {
     // Calculate baseline warning state
     const outOfBounds = 
       co2Val > SENSOR_CONFIGS.co2.threshold || 
-      vocVal > SENSOR_CONFIGS.voc.threshold || 
       tempVal > SENSOR_CONFIGS.temp.threshold || 
       humVal > SENSOR_CONFIGS.hum.threshold || 
       uvVal > SENSOR_CONFIGS.uv.threshold ||

@@ -7,7 +7,6 @@ const HISTORY_SIZE = 20;
 
 const KEY_MAP = {
   co2_ppm: 'co2',
-  gas_voc_ppb: 'voc',
   temperatura_c: 'temp',
   radiacion_uv: 'uv',
   humedad_pct: 'hum',
