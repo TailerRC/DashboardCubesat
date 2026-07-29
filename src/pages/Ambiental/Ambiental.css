@@ -1,178 +1,626 @@
+/* ─── Ambiental — Grid with Charts ────────────────────────────── */
 .ambiental-view {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  height: 100%;
+  gap: 14px;
+  min-height: min-content;
+  padding-bottom: 8px;
 }
 
+/* Security status banner */
+.security-status {
+  background: #1a1e23;
+  border: 1px solid #2a3038;
+  border-radius: 8px;
+  padding: 12px 18px;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 1.2px;
+  margin: 0;
+  text-transform: uppercase;
+}
+.packet-id-badge {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #6b7280;
+}
+
+.security-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  margin-top: 6px;
+  transition: background 0.3s ease;
+}
+.security-banner--ok      { background: linear-gradient(135deg, #1b5e20, #4caf50); }
+.security-banner--warning { background: linear-gradient(135deg, #e65100, #ff9800); }
+.security-banner--danger  { background: linear-gradient(135deg, #b71c1c, #f44336); }
+.security-banner--info    { background: linear-gradient(135deg, #16263d, #1e3a60); border: 1px solid #2d5584; }
+
+.security-icon {
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.security-text   { display: flex; flex-direction: column; gap: 1px; }
+.security-label  { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+.security-detail { font-size: 10px; color: rgba(255,255,255,0.85); font-weight: 500; letter-spacing: 0.5px; }
+
+/* ─── 2-column grid ─── */
 .ambiental-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  flex: 1;
+  gap: 14px;
+}
+.ambiental-card:nth-child(5) {
+  grid-column: span 2;
 }
 
+/* ─── Telemetry Card with Charts ─── */
 .ambiental-card {
   background-color: #1a1e23;
-  border-radius: 6px;
-  padding: 24px;
+  border-radius: 10px;
+  padding: 14px 16px 12px;
   border: 1px solid #2a3038;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  /* Card has exact height to contain header, value, gauge, chart and age footer */
+  height: 350px;
+  position: relative;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+  overflow: hidden;
 }
 
-.ambiental-card .card-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #a0aab5;
-  margin: 0 0 16px 0;
+/* Hover effect */
+.ambiental-card:hover {
+  border-color: var(--card-color, #4caf50);
+  box-shadow: 0 0 0 1px var(--card-color, #4caf50),
+              0 8px 32px -8px color-mix(in srgb, var(--card-color, #4caf50) 40%, transparent);
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+/* Top shimmer bar on hover */
+.ambiental-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--card-color, #4caf50), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: 10px 10px 0 0;
+}
+.ambiental-card:hover::before {
+  opacity: 1;
+}
+
+/* Card Header Row */
+.card-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.card-icon {
+  font-size: 13px;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--card-color, #4caf50) 15%, transparent);
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.ambiental-card:hover .card-icon {
+  background: color-mix(in srgb, var(--card-color, #4caf50) 25%, transparent);
+}
+
+.card-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  flex: 1;
 }
 
+/* Live indicator dot */
+.card-live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.25s, box-shadow 0.25s;
+}
+.card-live-dot--ok {
+  background-color: #00e676;
+  box-shadow: 0 0 8px #00e676;
+}
+.card-live-dot--warning {
+  background-color: #ff9100;
+  box-shadow: 0 0 8px #ff9100;
+  animation: blink-stale 1s infinite alternate;
+}
+.card-live-dot--danger {
+  background-color: #ff1744;
+  box-shadow: 0 0 8px #ff1744;
+  animation: blink-alert 0.6s infinite alternate;
+}
+.card-live-dot--inactive {
+  background-color: #546e7a;
+  box-shadow: none;
+}
+@keyframes blink-stale {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+@keyframes blink-alert {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+/* ─── Main Value ─── */
 .card-main-value {
-  margin-bottom: 24px;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 5px;
+  flex-shrink: 0;
 }
-
 .card-main-value .value {
-  font-size: 48px;
-  font-weight: 600;
-  color: #ffffff;
+  font-size: 32px;
+  font-weight: 700;
   line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -1px;
 }
-
 .card-main-value .unit {
-  font-size: 16px;
-  color: #a0aab5;
+  font-size: 13px;
+  color: #6b7280;
   font-weight: 500;
 }
+.value-placeholder {
+  font-size: 32px;
+  font-weight: 700;
+  color: #4b5563;
+  font-family: 'JetBrains Mono', monospace;
+}
 
-/* Gauge container */
+/* ─── Gauge Bar ─── */
 .gauge-container {
-  margin-top: auto;
-  margin-bottom: 12px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
 }
-
-.multi-section-gauge {
-  margin-bottom: 0px;
-}
-
 .gauge-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: #88929c;
-  margin-bottom: 8px;
+  font-size: 8.5px;
+  color: #6b7280;
+  margin-bottom: 4px;
   text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.3;
 }
-
 .gauge-labels span {
   flex: 1;
-  position: relative;
 }
-
 .gauge-bar {
-  height: 6px;
+  height: 5px;
   position: relative;
-  background-color: #333;
+  border-radius: 3px;
+  overflow: visible;
 }
-
 .gauge-bar .indicator {
   position: absolute;
-  top: -4px;
-  width: 4px;
-  height: 14px;
+  top: -5px;
+  width: 3px; height: 14px;
   background-color: #fff;
   border-radius: 2px;
-  box-shadow: 0 0 4px rgba(255,255,255,0.8);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
   z-index: 2;
+  transition: left 0.5s ease;
 }
 
-/* Specific gauge bar colors */
+/* Gauge colors */
 .co2-bar {
-  background: linear-gradient(to right, #4caf50 30%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
-}
-.voc-bar {
-  background: linear-gradient(to right, #4caf50 30%, #ffeb3b 50%, #ff9800 70%, #f44336 85%, #b71c1c 100%);
+  background: linear-gradient(to right, #4caf50 0%, #8bc34a 25%, #ffeb3b 50%, #ff9800 75%, #f44336 100%);
 }
 .temp-bar {
-  background: linear-gradient(to right, #2196f3 20%, #03a9f4 40%, #e0e0e0 60%, #ff9800 80%, #f44336 100%);
+  background: linear-gradient(to right, #1565c0 0%, #42a5f5 30%, #e3f2fd 55%, #ff9800 75%, #f44336 100%);
 }
 .hum-bar {
-  background: linear-gradient(to right, #ff9800 20%, #ffeb3b 40%, #4caf50 60%, #03a9f4 80%, #2196f3 100%);
+  background: linear-gradient(to right, #ff9800 15%, #ffeb3b 35%, #4caf50 55%, #03a9f4 75%, #1565c0 100%);
 }
 .pres-bar {
-  background: linear-gradient(to right, #9c27b0 20%, #ab47bc 40%, #ba68c8 60%, #ce93d8 80%, #e1bee7 100%);
+  background: linear-gradient(to right, #b71c1c 0%, #f44336 20%, #ffeb3b 38.75%, #4caf50 50%, #ffeb3b 61.25%, #f44336 80%, #b71c1c 100%);
 }
 .uv-bar {
-  background: linear-gradient(to right, #4caf50 20%, #8bc34a 40%, #ffeb3b 60%, #ff9800 80%, #e91e63 100%);
+  background: linear-gradient(to right, #4caf50 15%, #8bc34a 35%, #ffeb3b 55%, #ff9800 75%, #e91e63 100%);
 }
 
-/* Charts at the bottom of top panels */
-.chart-placeholder {
-  margin-top: 16px;
-  height: 80px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-bg-lines {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  z-index: 0;
-}
-
-.chart-bg-lines div {
-  width: 100%;
-  height: 1px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-}
-
-.chart-line-svg {
-  width: 100%;
-  height: calc(100% - 20px);
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-
-.chart-x-axis {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: #666;
-  border-top: 1px solid #333;
-  padding-top: 4px;
-  width: 100%;
-  margin-top: auto;
-  z-index: 2;
-}
-
-/* Decorators for gauge boundaries */
 .gauge-bar::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 30%; /* Normal/Elevado boundary */
-  height: 8px;
-  width: 1px;
-  background-color: #000;
+  bottom: 0; left: 30%;
+  height: 7px; width: 1px;
+  background-color: rgba(0, 0, 0, 0.4);
 }
 .gauge-bar::before {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 50%;
-  height: 8px;
-  width: 1px;
-  background-color: #000;
+  bottom: 0; left: 50%;
+  height: 7px; width: 1px;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Chart wrapper ─── */
+.chart-area-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ─── Card Footer ─── */
+.card-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  border-top: 1px solid #22272e;
+  padding-top: 8px;
+  margin-top: 2px;
+}
+.elapsed-time {
+  color: #6b7280;
+}
+
+/* Stale/Lost packet state style */
+.ambiental-card.card-stale {
+  border-color: rgba(230, 81, 0, 0.4);
+  background-color: #1c1d22;
+}
+.stale-badge {
+  color: #ff7043;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+.elapsed-time.age-fresh {
+  color: #00e676;
+}
+.elapsed-time.age-warning {
+  color: #ffb74d;
+}
+.elapsed-time.age-stale {
+  color: #7f8c8d;
+}
+
+/* ─── Scroll Progress Bar ─── */
+.ambiental-scroll-bar {
+  height: 3px;
+  background: #1e2530;
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ambiental-scroll-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00e676, #4fc3f7);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+  min-width: 0%;
+}
+
+/* ─── Tutorial Button ─── */
+.tutorial-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #2d5584;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  color: #4fc3f7;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.tutorial-btn:hover {
+  background: rgba(79, 195, 247, 0.15);
+  color: #81d4fa;
+  transform: scale(1.1);
+}
+
+/* ─── Pressure Anomaly Notice ─── */
+.pressure-anomaly-notice {
+  margin-top: 8px;
+  padding: 7px 14px;
+  background: rgba(171, 71, 188, 0.12);
+  border: 1px solid rgba(171, 71, 188, 0.35);
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #ce93d8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── Tutorial Modal ─── */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.18s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tutorial-modal {
+  background: #161b22;
+  border: 1px solid #2d3748;
+  border-radius: 12px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.tutorial-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2d3748;
+  flex-shrink: 0;
+}
+.tutorial-modal__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.5px;
+}
+.tutorial-modal__close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 16px;
+  cursor: pointer;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.tutorial-modal__close:hover {
+  background: rgba(255,255,255,0.08);
+  color: #e2e8f0;
+}
+.tutorial-modal__body {
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.tutorial-section { }
+.tutorial-section__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.tutorial-section__desc {
+  font-size: 12px;
+  color: #718096;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+.tutorial-section__note {
+  font-size: 11px;
+  color: #718096;
+  line-height: 1.6;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  border-left: 3px solid #2d5584;
+}
+.tutorial-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  color: #cbd5e0;
+}
+.tutorial-table thead tr {
+  background: #1e2530;
+}
+.tutorial-table th {
+  text-align: left;
+  padding: 7px 10px;
+  font-weight: 700;
+  font-size: 10px;
+  color: #6b7280;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.tutorial-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #1e2530;
+  vertical-align: middle;
+}
+.tutorial-table tbody tr:hover td {
+  background: rgba(255,255,255,0.03);
+}
+.tutorial-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.tutorial-badge--ok      { background: rgba(76, 175, 80, 0.2); color: #66bb6a; }
+.tutorial-badge--warning { background: rgba(255, 152, 0, 0.2); color: #ffa726; }
+.tutorial-badge--danger  { background: rgba(244, 67, 54, 0.2); color: #ef5350; }
+.tutorial-list {
+  padding: 0 0 0 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tutorial-list li {
+  font-size: 12px;
+  color: #718096;
+  line-height: 1.6;
+}
+.tutorial-list li strong {
+  color: #94a3b8;
+}
+
+/* ─── Compact Reference Modal ─── */
+.tutorial-modal--compact {
+  max-width: 480px;
+}
+.tutorial-modal--compact .tutorial-modal__body {
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+/* tref sections */
+.tref-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tref-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #4b5563;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tref-label i {
+  color: #4fc3f7;
+  font-size: 10px;
+}
+
+/* Status rows */
+.tref-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tref-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tref-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  min-width: 100px;
+}
+.tref-badge--ok      { background: rgba(76,175,80,0.15);  color: #66bb6a; }
+.tref-badge--warning { background: rgba(255,152,0,0.15);  color: #ffa726; }
+.tref-badge--danger  { background: rgba(244,67,54,0.15);  color: #ef5350; }
+.tref-desc {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Thresholds table */
+.tref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  color: #cbd5e0;
+}
+.tref-table thead tr {
+  background: #1a1e28;
+}
+.tref-table th {
+  text-align: left;
+  padding: 5px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #4b5563;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.tref-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #1a1e28;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.tref-table td:first-child {
+  width: 20px;
+  text-align: center;
+}
+.tref-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.tref-note {
+  font-size: 10px;
+  color: #4b5563;
+  font-style: italic;
+  padding-top: 2px;
+}
+
+/* Indicators legend */
+.tref-indicators {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 12px;
+}
+.tref-ind {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #6b7280;
+}
+.tref-ind i {
+  font-size: 8px;
+  flex-shrink: 0;
 }

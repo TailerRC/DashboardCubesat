@@ -1,176 +1,455 @@
+import { useState, useRef, useEffect } from 'react';
+import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
+import SensorChart from '../../components/Charts/SensorChart';
 import './Ambiental.css';
 
+/* ── Tutorial Modal ────────────────────────────────────────────────────── */
+function TutorialModal({ onClose }) {
+  return (
+    <div className="tutorial-overlay" onClick={onClose}>
+      <div className="tutorial-modal tutorial-modal--compact" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="tutorial-modal__header">
+          <span className="tutorial-modal__title">
+            <i className="fa-solid fa-chart-line" style={{ marginRight: '7px', color: '#4fc3f7' }}></i>
+            Referencia Ambiental
+          </span>
+          <button className="tutorial-modal__close" onClick={onClose}>
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div className="tutorial-modal__body">
+
+          {/* ── Banner de estado ── */}
+          <section className="tref-section">
+            <div className="tref-label">
+              <i className="fa-solid fa-shield-halved"></i> ESTADO BANNER
+            </div>
+            <div className="tref-rows">
+              <div className="tref-row">
+                <span className="tref-badge tref-badge--ok">
+                  <i className="fa-solid fa-circle-check"></i> SEGURO
+                </span>
+                <span className="tref-desc">0 – 1 vars fuera de umbral</span>
+              </div>
+              <div className="tref-row">
+                <span className="tref-badge tref-badge--warning">
+                  <i className="fa-solid fa-triangle-exclamation"></i> EN RIESGO
+                </span>
+                <span className="tref-desc">2 – 3 vars fuera de umbral</span>
+              </div>
+              <div className="tref-row">
+                <span className="tref-badge tref-badge--danger">
+                  <i className="fa-solid fa-circle-xmark"></i> CRÍTICO
+                </span>
+                <span className="tref-desc">4 – 5 vars fuera de umbral</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Umbrales ── */}
+          <section className="tref-section">
+            <div className="tref-label">
+              <i className="fa-solid fa-sliders"></i> UMBRALES DE ALERTA
+            </div>
+            <table className="tref-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Variable</th>
+                  <th>Normal</th>
+                  <th>Alerta</th>
+                  <th>Ud.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><i className="fa-solid fa-smog" style={{ color: '#f9a825' }}></i></td>
+                  <td>CO₂</td><td>400–1000</td><td>&gt; 1000</td><td>ppm</td>
+                </tr>
+                <tr>
+                  <td><i className="fa-solid fa-temperature-half" style={{ color: '#ff7043' }}></i></td>
+                  <td>Temperatura</td><td>−10–40</td><td>&gt; 40</td><td>°C</td>
+                </tr>
+                <tr>
+                  <td><i className="fa-solid fa-sun" style={{ color: '#ff9800' }}></i></td>
+                  <td>UV</td><td>0–7.5</td><td>&gt; 7.5</td><td>idx</td>
+                </tr>
+                <tr>
+                  <td><i className="fa-solid fa-droplet" style={{ color: '#03a9f4' }}></i></td>
+                  <td>Humedad</td><td>0–85</td><td>&gt; 85</td><td>%RH</td>
+                </tr>
+                <tr>
+                  <td><i className="fa-solid fa-gauge-high" style={{ color: '#ab47bc' }}></i></td>
+                  <td>Presión*</td><td>±45 Pa</td><td>|P|&gt;45</td><td>Pa</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="tref-note">
+              <i className="fa-solid fa-asterisk" style={{ color: '#ab47bc', fontSize: '8px' }}></i>
+              &nbsp;Relativa a lanzamiento (0 Pa). Anomalía de tasa ≠ estado ambiental.
+            </div>
+          </section>
+
+          {/* ── Indicadores de tarjeta ── */}
+          <section className="tref-section">
+            <div className="tref-label">
+              <i className="fa-solid fa-circle-info"></i> INDICADORES
+            </div>
+            <div className="tref-indicators">
+              <div className="tref-ind">
+                <i className="fa-solid fa-circle" style={{ color: '#00e676' }}></i>
+                <span>Dato fresco · en rango</span>
+              </div>
+              <div className="tref-ind">
+                <i className="fa-solid fa-circle" style={{ color: '#ffb74d' }}></i>
+                <span>Dato &gt; 1.5 s de antigüedad</span>
+              </div>
+              <div className="tref-ind">
+                <i className="fa-solid fa-circle" style={{ color: '#ef5350' }}></i>
+                <span>Valor fuera de umbral</span>
+              </div>
+              <div className="tref-ind">
+                <i className="fa-regular fa-circle" style={{ color: '#4b5563' }}></i>
+                <span>Sin datos recibidos</span>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Gauge config per sensor ──────────────────────────────────────────── */
+const GAUGE_INFO = {
+  co2_ppm: {
+    color: '#f9a825',
+    barClass: 'co2-bar',
+    indicatorPct: (v) => {
+      const clamped = Math.max(400, Math.min(5000, v));
+      if (clamped <= 1000) {
+        return 50 * (clamped - 400) / 600;
+      } else {
+        return 50 + 50 * (clamped - 1000) / 4000;
+      }
+    },
+    gaugeLabels: [
+      ['Mínimo', '400ppm'],
+      ['Normal', '700ppm'],
+      ['Límite', '1000ppm'],
+      ['Peligro', '3000ppm'],
+      ['Crítico', '5000ppm'],
+    ],
+    threshold: 1000,
+    yMin: 400,
+    yMax: 5000,
+    decimals: 2
+  },
+  temperatura_c: {
+    color: '#ff7043',
+    barClass: 'temp-bar',
+    indicatorPct: (v) => Math.max(0, Math.min(100, ((v + 10) / 70) * 100)),
+    gaugeLabels: [
+      ['Frío', '-10°C'],
+      ['Fresco', '10°C'],
+      ['Normal', '25°C'],
+      ['Cálido', '40°C'],
+      ['Peligro', '60°C'],
+    ],
+    threshold: 40,
+    yMin: -10,
+    yMax: 60,
+    decimals: 1
+  },
+  humedad_pct: {
+    color: '#03a9f4',
+    barClass: 'hum-bar',
+    indicatorPct: (v) => Math.max(0, Math.min(100, v)),
+    gaugeLabels: [
+      ['Seco', '0%'],
+      ['Aceptable', '30%'],
+      ['Confort', '50%'],
+      ['Húmedo', '75%'],
+      ['Límite', '100%'],
+    ],
+    threshold: 85,
+    yMin: 0,
+    yMax: 100,
+    decimals: 1
+  },
+  presion_pa: {
+    color: '#ab47bc',
+    barClass: 'pres-bar',
+    indicatorPct: (v) => Math.max(0, Math.min(100, ((v + 200) / 400) * 100)),
+    gaugeLabels: [
+      ['Baja Pres.', '-200 Pa'],
+      ['', '-100 Pa'],
+      ['Lanzam.', '0 Pa'],
+      ['', '+100 Pa'],
+      ['Alta Pres.', '+200 Pa'],
+    ],
+    threshold: 45,
+    yMin: -200,
+    yMax: 200,
+    decimals: 2
+  },
+  radiacion_uv: {
+    color: '#ff9800',
+    barClass: 'uv-bar',
+    indicatorPct: (v) => Math.max(0, Math.min(100, (v / 15) * 100)),
+    gaugeLabels: [
+      ['Bajo', '0'],
+      ['Moderado', '2.5'],
+      ['Alto', '5.5'],
+      ['Muy Alto', '10'],
+      ['Extremo', '15'],
+    ],
+    threshold: 7.5,
+    yMin: 0,
+    yMax: 15,
+    decimals: 1
+  },
+};
+
+const SENSOR_META = {
+  co2_ppm: {
+    title: 'CONCENTRACIÓN DE CO₂',
+    icon: 'fa-solid fa-smog',
+    unit: 'ppm',
+    color: '#f9a825'
+  },
+  temperatura_c: {
+    title: 'TEMPERATURA',
+    icon: 'fa-solid fa-temperature-half',
+    unit: '°C',
+    color: '#ff7043'
+  },
+  radiacion_uv: {
+    title: 'RADIACIÓN ULTRAVIOLETA',
+    icon: 'fa-solid fa-sun',
+    unit: 'UV index',
+    color: '#ff9800'
+  },
+  humedad_pct: {
+    title: 'HUMEDAD RELATIVA',
+    icon: 'fa-solid fa-droplet',
+    unit: '%RH',
+    color: '#03a9f4'
+  },
+  presion_pa: {
+    title: 'PRESIÓN ATMOSFÉRICA',
+    icon: 'fa-solid fa-gauge-high',
+    unit: 'Pa',
+    color: '#ab47bc'
+  }
+};
+
 export default function Ambiental() {
+  const { sensors, estadoAmbiental, lastPacketId, activeAlerts } = useAmbientalMqtt();
+
+  // Tutorial modal state
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Separate pressure anomaly alerts (informational) from ambiental-security alerts
+  const securityAlerts = activeAlerts.filter(a => !a.includes('PRESIÓN (TASA)'));
+  const hasPressureAnomaly = activeAlerts.some(a => a.includes('PRESIÓN (TASA)'));
+
+  // Status banner configuration — based ONLY on the 5 ambient sensors
+  let statusLabel = 'SIN TELEMETRÍA';
+  let detailText  = 'ESPERANDO CONEXIÓN DEL BROKER MQTT...';
+  let bannerClass = 'security-banner--info';
+  let iconClass   = 'fa-wifi fa-fade';
+
+  if (estadoAmbiental !== 'SIN_DATOS') {
+    const count = securityAlerts.length;
+    if (count === 0) {
+      statusLabel = 'SEGURO';
+      detailText  = 'TODOS LOS PARÁMETROS EN RANGO NORMAL';
+      bannerClass = 'security-banner--ok';
+      iconClass   = 'fa-circle-check';
+    } else if (count <= 3) {
+      statusLabel = 'EN RIESGO';
+      detailText  = `PARÁMETROS FUERA DEL UMBRAL: ${securityAlerts.join(', ')}`;
+      bannerClass = 'security-banner--warning';
+      iconClass   = 'fa-triangle-exclamation';
+    } else {
+      statusLabel = 'CRÍTICO';
+      detailText  = `PARÁMETROS FUERA DEL UMBRAL: ${securityAlerts.join(', ')}`;
+      bannerClass = 'security-banner--danger';
+      iconClass   = 'fa-triangle-exclamation fa-fade';
+    }
+  }
+
   return (
     <div className="ambiental-view">
-      {/* Security Status */}
+
+      {/* ── Static separator bar ── */}
+      <div className="ambiental-scroll-bar"></div>
+
+      {/* ── Tutorial modal ── */}
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+
+      {/* ── Security Status Banner ── */}
       <section className="security-status">
-        <h3 className="section-title">ESTADO AMBIENTAL DE SEGURIDAD</h3>
-        <div className="security-banner security-banner--ok">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3 className="section-title">ESTADO AMBIENTAL DE SEGURIDAD</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {lastPacketId && (
+              <span className="packet-id-badge">
+                Topic: <span style={{ color: '#aaa' }}>ambiental</span> | Pkt: <span style={{ color: '#4fc3f7' }}>{lastPacketId}</span>
+              </span>
+            )}
+            <button
+              className="tutorial-btn"
+              onClick={() => setShowTutorial(true)}
+              title="¿Cómo leer estos datos?"
+            >
+              <i className="fa-solid fa-circle-question"></i>
+            </button>
+          </div>
+        </div>
+        <div className={`security-banner ${bannerClass}`}>
           <div className="security-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <i className={`fa-solid ${iconClass}`} style={{ fontSize: '16px', color: '#fff' }}></i>
           </div>
           <div className="security-text">
-            <span className="security-label">SEGURO</span>
-            <span className="security-detail">TODOS LOS PARAMETROS EN RANGO NORMAL</span>
+            <span className="security-label">{statusLabel}</span>
+            <span className="security-detail">{detailText}</span>
           </div>
         </div>
+        {/* Pressure anomaly informational note — separate from security state */}
+        {hasPressureAnomaly && (
+          <div className="pressure-anomaly-notice">
+            <i className="fa-solid fa-gauge-high" style={{ marginRight: '6px', color: '#ab47bc' }}></i>
+            AVISO TÉCNICO: Tasa de cambio de presión elevada detectada
+          </div>
+        )}
       </section>
 
-      {/* Grid Content */}
+      {/* ── 2×3 Sensor Grid ── */}
       <section className="ambiental-grid">
-        {/* Panel 1: CO2 */}
-        <div className="ambiental-card">
-          <h4 className="card-header">CONCENTRACIÓN DE CO2</h4>
-          <div className="card-main-value">
-            <span className="value">409.88</span>
-            <span className="unit">ppm</span>
-          </div>
-          <div className="gauge-container">
-            <div className="gauge-labels">
-              <span>Normal<br/>380ppm</span>
-              <span>Elevado<br/>420ppm</span>
-              <span>Alto<br/>450ppm</span>
-              <span>Peligroso<br/>500ppm</span>
-              <span>Crítico<br/>600ppm</span>
-            </div>
-            <div className="gauge-bar co2-bar">
-              <div className="indicator" style={{ left: '15%' }}></div>
-            </div>
-          </div>
-          <div className="chart-placeholder">
-             <div className="chart-bg-lines">
-                <div></div><div></div><div></div><div></div><div></div>
-             </div>
-             <svg className="chart-line-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
-                <polyline points="0,20 10,22 20,18 30,25 40,21 50,19 60,20 70,23 80,18 90,20 100,19" fill="none" stroke="#2196f3" strokeWidth="2"/>
-                <polyline points="0,25 10,25 20,25 30,25 40,25 50,25 60,25 70,25 80,25 90,25 100,25" fill="none" stroke="#f44336" strokeLinecap="square" strokeDasharray="4 4" strokeWidth="1"/>
-             </svg>
-             <div className="chart-x-axis">
-               <span>120 s</span><span>90 s</span><span>60 s</span><span>30 s</span><span>0 s</span>
-             </div>
-          </div>
-        </div>
-        
-        {/* Panel 2: VOC */}
-        <div className="ambiental-card">
-          <h4 className="card-header">GASES NOCIVOS (VOC)</h4>
-          <div className="card-main-value">
-            <span className="value">23</span>
-            <span className="unit">ppb</span>
-          </div>
-          <div className="gauge-container">
-            <div className="gauge-labels">
-              <span>Limpio<br/>0 ppb</span>
-              <span>Aceptabl<br/>50 ppb</span>
-              <span>Moderado<br/>100 ppb</span>
-              <span>Alto<br/>300 ppb</span>
-              <span>Peligroso<br/>500 ppb</span>
-            </div>
-            <div className="gauge-bar voc-bar">
-              <div className="indicator" style={{ left: '10%' }}></div>
-            </div>
-          </div>
-           <div className="chart-placeholder">
-              <div className="chart-bg-lines">
-                <div></div><div></div><div></div><div></div><div></div>
-             </div>
-             <svg className="chart-line-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
-                <polyline points="0,28 10,27 20,28 30,27 40,28 50,27 60,28 70,27 80,28 90,27 100,28" fill="none" stroke="#2196f3" strokeWidth="2"/>
-                <polyline points="0,15 10,15 20,15 30,15 40,15 50,15 60,15 70,15 80,15 90,15 100,15" fill="none" stroke="#f44336" strokeLinecap="square" strokeDasharray="4 4" strokeWidth="1"/>
-             </svg>
-             <div className="chart-x-axis">
-               <span>120 s</span><span>90 s</span><span>60 s</span><span>30 s</span><span>0 s</span>
-             </div>
-          </div>
-        </div>
+        {Object.entries(SENSOR_META).map(([key, meta]) => {
+          const sensor = sensors[key];
+          const hasValue = sensor && sensor.v !== null;
+          const gInfo = GAUGE_INFO[key];
+          const indPct = hasValue ? gInfo.indicatorPct(sensor.v) : 0;
 
-        {/* Panel 3: Temperature */}
-        <div className="ambiental-card">
-          <h4 className="card-header">TEMPERATURA</h4>
-          <div className="card-main-value">
-            <span className="value">24.9</span>
-            <span className="unit">°C</span>
-          </div>
-          <div className="gauge-container multi-section-gauge">
-            <div className="gauge-labels">
-              <span>Frío<br/>15°C</span>
-              <span>Fresco<br/>20°C</span>
-              <span>Normal<br/>25°C</span>
-              <span>Cálido<br/>32°C</span>
-              <span>Caliente<br/>40°C</span>
-            </div>
-            <div className="gauge-bar temp-bar">
-              <div className="indicator" style={{ left: '46%' }}></div>
-            </div>
-          </div>
-        </div>
+          let dotClass = 'card-live-dot--inactive';
+          let ageClass = 'age-stale';
 
-        {/* Panel 4: Humidity */}
-        <div className="ambiental-card">
-          <h4 className="card-header">HUMEDAD</h4>
-          <div className="card-main-value">
-            <span className="value">56.7</span>
-            <span className="unit">%RH</span>
-          </div>
-          <div className="gauge-container multi-section-gauge">
-            <div className="gauge-labels">
-              <span>Muy Seco<br/>20 %R</span>
-              <span>Seco<br/>30 %R</span>
-              <span>Confortable<br/>50 %R</span>
-              <span>Húmedo<br/>70 %RH</span>
-              <span>Muy Húmedo<br/>90 %RH</span>
+          if (hasValue) {
+            // Determine age color class
+            if (sensor.hace_seg <= 1.0) {
+              ageClass = 'age-fresh';
+            } else if (sensor.hace_seg <= 1.5) {
+              ageClass = 'age-warning';
+            } else {
+              ageClass = 'age-stale';
+            }
+
+            // Determine status dot class
+            const val = sensor.v;
+            const threshold = sensor.umbral_alerta ?? gInfo.threshold;
+            const isAlarm = key === 'presion_pa'
+              ? (Math.abs(val) > threshold || estadoAmbiental === 'ANOMALIA')
+              : (val > threshold);
+
+            if (isAlarm) {
+              dotClass = 'card-live-dot--danger';
+            } else if (sensor.stale || sensor.hace_seg > 1.5) {
+              dotClass = 'card-live-dot--warning';
+            } else {
+              dotClass = 'card-live-dot--ok';
+            }
+          }
+
+          return (
+            <div
+              key={key}
+              className={`ambiental-card ${sensor?.stale && hasValue ? 'card-stale' : ''}`}
+              style={{ '--card-color': meta.color }}
+            >
+              {/* Header */}
+              <div className="card-header-row">
+                <span className="card-icon" style={{ color: meta.color }}>
+                  <i className={meta.icon}></i>
+                </span>
+                <h4 className="card-header">{meta.title}</h4>
+                {hasValue && (
+                  <span className={`card-live-dot ${dotClass}`}></span>
+                )}
+              </div>
+
+              {/* Main value */}
+              <div className="card-main-value">
+                {hasValue ? (
+                  <>
+                    <span className="value" style={{ color: sensor.stale ? '#7f8c8d' : meta.color }}>
+                      {sensor.v.toFixed(2)}
+                    </span>
+                    <span className="unit">{meta.unit}</span>
+                  </>
+                ) : (
+                  <span className="value-placeholder">---</span>
+                )}
+              </div>
+
+              {/* Gauge */}
+              <div className="gauge-container">
+                <div className="gauge-labels">
+                  {gInfo.gaugeLabels.map(([lbl, val], i) => (
+                    <span key={i}>{lbl}<br/>{val}</span>
+                  ))}
+                </div>
+                <div className={`gauge-bar ${gInfo.barClass}`}>
+                  <div className="indicator" style={{ left: `${indPct}%` }}></div>
+                </div>
+              </div>
+
+              {/* Chart */}
+              <div className="chart-area-wrap">
+                {hasValue && sensor.history && (
+                  <SensorChart
+                    data={sensor.history.map(pt => ({
+                      value: pt.value,
+                      tsAgo: Math.max(0, (Date.now() - pt.timestamp) / 1000)
+                    }))}
+                    color={meta.color}
+                    yMin={gInfo.yMin}
+                    yMax={gInfo.yMax}
+                    unit={meta.unit}
+                    decimals={gInfo.decimals}
+                    thresholdY={key === 'presion_pa' ? -Math.abs(sensor.umbral_alerta ?? gInfo.threshold) : (sensor.umbral_alerta ?? gInfo.threshold)}
+                  />
+                )}
+              </div>
+
+              {/* Footer: Elapsed time + stale marker */}
+              <div className="card-footer-row">
+                {hasValue ? (
+                  <>
+                    <span className={`elapsed-time ${ageClass}`}>
+                      <i className="fa-regular fa-clock" style={{ marginRight: '4px', opacity: 0.6 }}></i>
+                      hace {sensor.hace_seg.toFixed(1)}s
+                    </span>
+                    {sensor.stale && (
+                      <span className="stale-badge">
+                        <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: '3px' }}></i>
+                        DATO OBSOLETO
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="elapsed-time">Esperando datos...</span>
+                )}
+              </div>
             </div>
-            <div className="gauge-bar hum-bar">
-              <div className="indicator" style={{ left: '55%' }}></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Panel 5: Pressure */}
-        <div className="ambiental-card">
-          <h4 className="card-header">PRESIÓN ATMOSFÉRICA</h4>
-          <div className="card-main-value">
-             <span className="value">1001.45</span>
-             <span className="unit">hPa</span>
-          </div>
-          <div className="gauge-container multi-section-gauge">
-             <div className="gauge-labels">
-               <span>500 m<br/>954 hPa</span>
-               <span>375 m<br/>968 hPa</span>
-               <span>250 m<br/>981 hPa</span>
-               <span>125 m<br/>997 hPa</span>
-               <span>Superficie<br/>1013 hPa</span>
-             </div>
-             <div className="gauge-bar pres-bar">
-               <div className="indicator" style={{ left: '80%' }}></div>
-             </div>
-          </div>
-        </div>
-
-        {/* Panel 6: UV */}
-        <div className="ambiental-card">
-          <h4 className="card-header">RADIACIÓN ULTRAVIOLETA</h4>
-          <div className="card-main-value">
-             <span className="value">3.9</span>
-             <span className="unit">UV index</span>
-          </div>
-          <div className="gauge-container multi-section-gauge">
-             <div className="gauge-labels">
-               <span>Mínimo<br/>0</span>
-               <span>Bajo<br/>2</span>
-               <span>Moderado<br/>4</span>
-               <span>Alto<br/>6</span>
-               <span>Muy Alto<br/>+8</span>
-             </div>
-             <div className="gauge-bar uv-bar">
-               <div className="indicator" style={{ left: '38%' }}></div>
-             </div>
-          </div>
-        </div>
-
+          );
+        })}
       </section>
     </div>
   );

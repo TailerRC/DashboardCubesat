@@ -1,245 +1,428 @@
+/* ─── Ubicacion View ───────────────────────────────── */
 .ubicacion-view {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  height: 100%;
+  gap: 12px;
+  min-height: min-content;
+  padding-bottom: 20px;
 }
 
-.panel-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #a0aab5;
-  margin: 0 0 16px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.text-center { text-align: center; }
-.text-right { text-align: right; }
+/* ─── Utility ─── */
 .text-orange { color: #ff9800; }
 .text-yellow { color: #ffeb3b; }
-.text-cyan { color: #03a9f4; }
-.text-green { color: #4caf50; }
+.text-cyan   { color: #03a9f4; }
+.text-green  { color: #4caf50; }
+.mono        { font-family: 'JetBrains Mono', monospace; }
 
-/* Top Section */
-.ubicacion-top-section {
-  display: flex;
-  gap: 16px;
-  flex: 1 1 50%;
+/* ─── Row system ─── */
+/* Fila 1: mapa ancho completo */
+.ubi-row--map {
+  height: 480px;
+  flex-shrink: 0;
 }
 
+/* Filas 2 y 3: dos columnas */
+.ubi-row--two {
+  display: flex;
+  gap: 12px;
+  height: 270px;
+  flex-shrink: 0;
+}
+
+/* ─── Map Panel ─── */
 .map-panel {
-  flex: 3;
+  height: 100%;
   background-color: #1a1e23;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #2a3038;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 12px;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .map-grid-bg {
   flex: 1;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-color: #111418;
-  border-radius: 4px;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-color: #0d1014;
+  border-radius: 6px;
   position: relative;
   overflow: hidden;
-  margin-bottom: 12px;
+  min-height: 0;
+}
+
+.trajectory-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
 }
 
 .radar-circle {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: rgba(76, 175, 80, 0.2);
-  border: 1px solid rgba(76, 175, 80, 0.5);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse 2s infinite;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  border-radius: 50% !important;
+  background-color: rgba(76, 175, 80, 0.12) !important;
+  border: 1.5px solid rgba(76, 175, 80, 0.45) !important;
+  position: absolute !important;
+  transform: translate(-50%, -50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  animation: pulse 2.5s infinite !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  aspect-ratio: 1 / 1 !important;
 }
-
-.radar-circle svg {
-  width: 24px;
-  height: 24px;
-}
-
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-  70% { box-shadow: 0 0 0 15px rgba(76, 175, 80, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.5); }
+  70%  { box-shadow: 0 0 0 18px rgba(76,175,80,0); }
+  100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+}
+
+.map-lat-label, .map-lon-label {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  padding: 2px 4px;
 }
 
 .map-coordinates-label {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
-  font-family: monospace;
-  color: #fff;
-  font-size: 14px;
-  background: rgba(0,0,0,0.5);
-  padding: 4px 8px;
+  bottom: 10px; right: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0f7fa;
+  font-size: 12px;
+  background: rgba(0,0,0,0.6);
+  padding: 4px 10px;
   border-radius: 4px;
+  border: 1px solid rgba(79,195,247,0.25);
+  letter-spacing: 0.5px;
 }
 
 .map-footer {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.map-footer-right {
+  display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 .map-title-label {
-  color: #fff;
+  color: #e0e0e0;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-title-label i {
+  font-size: 15px !important;
 }
 .map-subtitle-label {
-  color: #88929c;
-  font-size: 12px;
+  color: #6b7280;
+  font-size: 10px;
 }
 
-/* GPS Data right panel */
-.gps-data-panel {
+/* Landing coords — inline in map footer */
+.landing-coords-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.landing-coords-inline i {
+  font-size: 13px !important;
+}
+.landing-coords-label {
+  font-size: 9px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+.landing-coords-value {
+  font-size: 11px;
+  color: #a5d6a7;
+  font-weight: 600;
+}
+
+/* ─── Panel Card (shared by all 4 panels in rows 2+3) ─── */
+.ubicacion-view .panel-card {
   flex: 1;
   background-color: #1a1e23;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #2a3038;
-  padding: 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  min-width: 0;
+  transition: border-color 0.2s;
+}
+.ubicacion-view .panel-card:hover { border-color: #3a4050; }
+
+.ubi-panel-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ubi-panel-header i {
+  font-size: 13px !important;
+  vertical-align: middle;
 }
 
+/* ─── GPS Data Panel ─── */
+.gps-data-panel {
+  /* inherits from .panel-card */
+}
 .gps-table {
   width: 100%;
-  color: #e0e0e0;
-  font-size: 14px;
-  line-height: 2.2;
-}
-
-.landing-coords {
-  margin-top: auto;
-  background-color: rgba(76, 175, 80, 0.1);
-  border: 1px solid #4caf50;
-  border-radius: 6px;
-  padding: 16px;
-  text-align: center;
-}
-
-.landing-label {
-  color: #a0aab5;
-  font-size: 12px;
-  margin-bottom: 8px;
-}
-
-.landing-value {
-  color: #fff;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-/* Bottom Section */
-.ubicacion-bottom-section {
-  display: flex;
-  gap: 16px;
-  flex: 1 1 35%;
-}
-
-.panel-card {
+  border-collapse: collapse;
   flex: 1;
-  background-color: #1a1e23;
-  border-radius: 6px;
-  border: 1px solid #2a3038;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
 }
+.gps-table td {
+  padding: 4px 0;
+  font-size: 11.5px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #9ca3af;
+  vertical-align: middle;
+}
+.gps-table td:first-child { color: #6b7280; font-size: 11px; }
+.gps-val  { text-align: right; color: #e5e7eb !important; font-family: 'JetBrains Mono', monospace; font-size: 11.5px !important; }
+.gps-hi   { color: #ff9800 !important; font-weight: 700; }
+.gps-ok   { color: #4caf50 !important; }
 
+/* ─── Big value display ─── */
 .panel-main-value {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  margin-bottom: 12px;
+  flex-shrink: 0;
 }
-.panel-main-value .value {
-  font-size: 42px;
-  font-weight: bold;
+.big-value {
+  font-size: 32px;
+  font-weight: 700;
   color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
 }
-.panel-main-value .unit {
-  font-size: 16px;
-  color: #a0aab5;
+.big-unit {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
-.chart-area {
+/* ─── Chart axes wrapper ─── */
+.chart-axes-wrap {
+  display: flex;
+  gap: 4px;
   flex: 1;
-  min-height: 60px;
-  border-bottom: 1px solid #333;
-  margin-bottom: 12px;
+  min-height: 0;
+}
+.chart-y-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 34px;
+  flex-shrink: 0;
+  padding-bottom: 16px;
+}
+.chart-y-side span {
+  font-size: 8px;
+  color: #6b7280;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+.chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   position: relative;
 }
-
-.graph-svg {
+.ubi-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  position: absolute;
-  top: 0; left: 0;
+  display: block;
+}
+.chart-x-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid #2a3038;
+  padding-top: 4px;
+  flex-shrink: 0;
+  margin-top: auto; /* Push below absolute container */
 }
 
+/* ─── Stats footer ─── */
 .panel-footer-stats {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  flex-shrink: 0;
 }
 .panel-footer-stats > div {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 .stat-label {
-  color: #a0aab5;
-  font-size: 10px;
+  color: #6b7280;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
 }
 .stat-value {
-  color: #e0e0e0;
-  font-weight: bold;
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* Signal Bars */
+/* ─── Signal Bars ─── */
 .signal-bars-area {
-  flex: 1;
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #333;
+  gap: 5px;
+  flex: 1;
+  min-height: 30px;
+  max-height: 70px;
+  border-bottom: 1px solid #2a3038;
 }
-
 .signal-bar {
   flex: 1;
-  background-color: #333;
-  border-radius: 4px 4px 0 0;
-  min-height: 10px;
+  background-color: #2a3038;
+  border-radius: 3px 3px 0 0;
+  min-height: 8px;
+  transition: background-color 0.3s;
 }
-
-/* Heights based on signal strength logic */
-.bar-1 { height: 15%; }
-.bar-2 { height: 25%; }
-.bar-3 { height: 35%; }
-.bar-4 { height: 45%; }
-.bar-5 { height: 55%; }
-.bar-6 { height: 65%; }
-.bar-7 { height: 75%; }
-.bar-8 { height: 85%; }
-.bar-9 { height: 95%; }
+.bar-1  { height: 10%; }
+.bar-2  { height: 20%; }
+.bar-3  { height: 30%; }
+.bar-4  { height: 40%; }
+.bar-5  { height: 50%; }
+.bar-6  { height: 60%; }
+.bar-7  { height: 70%; }
+.bar-8  { height: 80%; }
+.bar-9  { height: 90%; }
 .bar-10 { height: 100%; }
+.signal-bar.active { background-color: #66bb6a; }
 
-.signal-bar.active {
-  background-color: #8bc34a;
+.signal-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #6b7280;
+  padding-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
 }
+
+/* ─── absolute HTML chart overlay markers (prevents stretch/distortion) ─── */
+.chart-body-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chart-marker {
+  position: absolute !important;
+  width: 9px !important;
+  height: 9px !important;
+  min-width: 9px !important;
+  min-height: 9px !important;
+  max-width: 9px !important;
+  max-height: 9px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid #ffffff !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
+  z-index: 15 !important;
+  box-sizing: border-box !important;
+  aspect-ratio: 1 / 1 !important;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+
+.alt-marker {
+  background-color: #ff9800 !important;
+}
+
+.dist-marker {
+  background-color: #03a9f4 !important;
+}
+
+/* Map marker dot wrapper */
+.map-marker-dot {
+  position: absolute !important;
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px !important;
+  min-height: 8px !important;
+  max-width: 8px !important;
+  max-height: 8px !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
+  z-index: 20 !important;
+  box-sizing: border-box !important;
+  aspect-ratio: 1 / 1 !important;
+  box-shadow: 0 0 3px rgba(0,0,0,0.6);
+}
+
+/* ─── Cartesian 4-Quadrant Plot Styling ─── */
+.map-grid-bg--cartesian {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background-image: none !important;
+  background-color: #0c1014 !important;
+}
+
+.cartesian-plot-container {
+  height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.cartesian-svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+

@@ -7,14 +7,31 @@
 
 /* ── Telemetry Strip ── */
 .topbar-telemetry {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 6px 20px;
   background: #15171c;
   border-bottom: 1px solid #2a2d35;
-  overflow-x: auto;
-  white-space: nowrap;
+  overflow: hidden;
+  padding: 6px 20px;
+}
+
+@keyframes telemetry-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.topbar-telemetry-scroll {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: max-content;
+  animation: telemetry-scroll 60s linear infinite;
+}
+
+.topbar-telemetry:hover .topbar-telemetry-scroll {
+  animation-play-state: paused;
 }
 
 .telemetry-item {
@@ -76,11 +93,11 @@
 }
 
 .progress-fill {
-  width: 75%;
+  width: 0%;
   height: 100%;
   background: linear-gradient(90deg, #4caf50, #8bc34a);
   border-radius: 2px;
-  transition: width 0.6s ease;
+  transition: width 0.15s ease;
 }
 
 .topbar-info-right {

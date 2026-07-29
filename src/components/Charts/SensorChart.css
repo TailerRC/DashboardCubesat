@@ -1,0 +1,137 @@
+/* ─── SensorChart Styles ──────────────────────────────────────────────── */
+
+.sensor-chart-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* ── Axes wrapper ── */
+.sensor-chart-axes {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Y Axis ── */
+.sensor-chart-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 38px;
+  flex-shrink: 0;
+  padding-bottom: 18px; /* align with x-axis space */
+}
+.sensor-chart-y span {
+  font-size: 8.5px;
+  color: #6b7280;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+
+/* ── Chart body ── */
+.sensor-chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: crosshair;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── SVG ── */
+.sensor-chart-svg {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  display: block;
+}
+
+/* ── X Axis ── */
+.sensor-chart-x {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid #2a3038;
+  padding-top: 4px;
+  flex-shrink: 0;
+  height: 18px;
+  line-height: 14px;
+}
+
+/* ── Data Dots ── */
+.sensor-dot {
+  transition: r 0.15s ease, opacity 0.15s ease;
+}
+.sensor-dot--hover {
+  filter: drop-shadow(0 0 5px var(--dot-color));
+}
+
+/* ── Active (latest) dot pulse animation ── */
+@keyframes ping {
+  0%   { r: 3px; opacity: 0.8; }
+  60%  { r: 7px; opacity: 0; }
+  100% { r: 7px; opacity: 0; }
+}
+.sensor-dot--pulse-ring {
+  animation: ping 2s ease-out infinite;
+}
+
+/* ── Cursor guideline ── */
+.sensor-cursor-line {
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+/* ── Tooltip ── */
+.sensor-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  background: rgba(12, 15, 20, 0.95);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  padding: 3px 7px;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  text-align: center;
+  transition: opacity 0.1s ease;
+  transform: translate(-50%, -115%);
+}
+.sensor-tooltip__value {
+  display: inline;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sensor-tooltip__sep {
+  display: inline;
+  font-size: 9px;
+  color: #444;
+  margin: 0 3px;
+}
+.sensor-tooltip__time {
+  display: inline;
+  font-size: 9px;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sensor-tooltip__arrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid rgba(255,255,255,0.15);
+}
