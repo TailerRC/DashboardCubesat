@@ -45,7 +45,7 @@ export default function Ubicacion() {
     });
 
     // Dark thematic map style from CartoDB (perfect for dark dashboard)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20,
     }).addTo(map);
 
@@ -103,7 +103,7 @@ export default function Ubicacion() {
     const latHist = data.latitud.history || [];
     const lonHist = data.longitud.history || [];
     const points = latHist.map((pt, idx) => [pt.value, lonHist[idx]?.value || pt.value]);
-    
+
     polyline.setLatLngs(points);
   }, [data]);
 
@@ -131,8 +131,8 @@ export default function Ubicacion() {
   const speedLabel = isAscending
     ? `+${verticalSpeed.toFixed(1)} m/s`
     : isDescending
-    ? `${verticalSpeed.toFixed(1)} m/s`
-    : '0.0 m/s';
+      ? `${verticalSpeed.toFixed(1)} m/s`
+      : '0.0 m/s';
   const speedClass = isAscending ? 'text-orange' : isDescending ? 'text-cyan' : 'text-green';
 
   return (

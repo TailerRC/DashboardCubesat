@@ -7,34 +7,34 @@ import './MapaOrbital.css';
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
 // ── Ícono verde con pulso (mi ubicación) ──────────────────────────────────
 const iconoMiUbicacion = L.divIcon({
-  className:   'mapa-icon-wrapper',
-  html:        `<div class="mapa-pin mapa-pin--lima"><div class="mapa-pin__dot"></div><div class="mapa-pin__pulse"></div></div>`,
-  iconSize:    [26, 26],
-  iconAnchor:  [13, 13],
+  className: 'mapa-icon-wrapper',
+  html: `<div class="mapa-pin mapa-pin--lima"><div class="mapa-pin__dot"></div><div class="mapa-pin__pulse"></div></div>`,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
   popupAnchor: [0, -16],
 });
 
 // ── Ícono celeste (click) ─────────────────────────────────────────────────
 const iconoClick = L.divIcon({
-  className:   'mapa-icon-wrapper',
-  html:        `<div class="mapa-pin mapa-pin--click"><div class="mapa-pin__dot"></div></div>`,
-  iconSize:    [20, 20],
-  iconAnchor:  [10, 10],
+  className: 'mapa-icon-wrapper',
+  html: `<div class="mapa-pin mapa-pin--click"><div class="mapa-pin__dot"></div></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
   popupAnchor: [0, -12],
 });
 
 const LIMA = { lat: -12.0464, lon: -77.0428 };
 
 const MapaOrbital = () => {
-  const mountRef       = useRef(null);
-  const mapRef         = useRef(null);
-  const miMarkerRef    = useRef(null);
+  const mountRef = useRef(null);
+  const mapRef = useRef(null);
+  const miMarkerRef = useRef(null);
   const clickMarkerRef = useRef(null);
 
   useEffect(() => {
@@ -42,15 +42,15 @@ const MapaOrbital = () => {
 
     // ── Crear mapa ──────────────────────────────────────────────────────
     const map = L.map(mountRef.current, {
-      center:             [LIMA.lat, LIMA.lon],
-      zoom:               13,
-      zoomControl:        true,
+      center: [LIMA.lat, LIMA.lon],
+      zoom: 13,
+      zoomControl: true,
       attributionControl: true,
     });
 
     // Usar tiles de color negro / dark-mode de CartoDB
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom:     19,
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
     }).addTo(map);
     map.attributionControl.setPrefix(false);
@@ -80,15 +80,15 @@ const MapaOrbital = () => {
         miMarkerRef.current.getPopup().setContent(html);
       } else {
         const popup = L.popup({
-          closeButton:  true,
-          className:    'mapa-popup-wrapper mapa-popup-wrapper--green',
-          offset:       [0, -5],
-          autoClose:    false,
+          closeButton: true,
+          className: 'mapa-popup-wrapper mapa-popup-wrapper--green',
+          offset: [0, -5],
+          autoClose: false,
           closeOnClick: false,
         }).setContent(html);
 
         miMarkerRef.current = L.marker([lat, lon], {
-          icon:         iconoMiUbicacion,
+          icon: iconoMiUbicacion,
           zIndexOffset: 1000,
         })
           .addTo(map)
@@ -135,10 +135,10 @@ const MapaOrbital = () => {
         </div>`;
 
       const popup = L.popup({
-        closeButton:  true,
-        className:    'mapa-popup-wrapper mapa-popup-wrapper--blue',
-        offset:       [0, -5],
-        autoClose:    true,
+        closeButton: true,
+        className: 'mapa-popup-wrapper mapa-popup-wrapper--blue',
+        offset: [0, -5],
+        autoClose: true,
         closeOnClick: false,
       }).setContent(html);
 
@@ -153,7 +153,7 @@ const MapaOrbital = () => {
 
     return () => {
       map.remove();
-      mapRef.current    = null;
+      mapRef.current = null;
       miMarkerRef.current = null;
     };
   }, []);
