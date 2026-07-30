@@ -1,10 +1,12 @@
 import React from 'react';
 import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
+import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
 import './Mision.css';
 
 export default function Mision() {
   const { data: misionData, faseUI, lastPacketId, isConnected } = useMisionMqtt();
+  const { data: orientData } = useOrientacion3DMqtt();
 
   const fasesUIList = [
     { label: 'INICIALIZACIÓN', key: 'INICIALIZACIÓN' },
@@ -32,10 +34,10 @@ export default function Mision() {
   };
 
   // Crosshair translation offset calculation for Orientation Panel
-  const cabeceoVal = misionData.cabeceo_deg.v;
-  const balanceoVal = misionData.balanceo_deg.v;
-  const giroVal = misionData.giro_yaw_deg.v;
-  const driftVal = misionData.giro_yaw_deg.drift_acumulado || 0.0;
+  const cabeceoVal = orientData.cabeceo_deg.v;
+  const balanceoVal = orientData.balanceo_deg.v;
+  const giroVal = orientData.giro_yaw_deg.v;
+  const driftVal = orientData.giro_yaw_deg.drift_acumulado || 0.0;
 
   const crosshairStyle = {
     transform: `translate(${Math.max(-40, Math.min(40, balanceoVal * 2))}px, ${Math.max(-40, Math.min(40, -cabeceoVal * 2))}px)`
@@ -58,15 +60,6 @@ export default function Mision() {
           </div>
         </div>
         <div className="mision-banner-right">
-          {lastPacketId && (
-            <span className="pkt-badge">
-              Topic: <span style={{ color: '#aaa' }}>mision</span> | Pkt: <span style={{ color: '#4fc3f7' }}>#{lastPacketId}</span>
-            </span>
-          )}
-          <span className="mision-stat-sub" style={{ color: '#a5d6a7' }}>
-            <i className="fa-solid fa-circle-check" style={{ marginRight: '4px' }}></i>
-            CDR Fase Oficial: <strong>{misionData.fase_cdr}</strong>
-          </span>
         </div>
       </section>
 
@@ -76,7 +69,7 @@ export default function Mision() {
         {/* Panel Izquierdo: Fases de Misión */}
         <div className="panel-card mision-fases premium-card-hover" style={{ '--card-color': '#4caf50' }}>
           <div className="fase-header">
-            <span className="fase-subtitle">ESTADO DE FASES (5 ESTADOS UI)</span>
+            <span className="fase-subtitle">Fase Actual de la Misión</span>
             <h2 className="fase-title">{faseUI}</h2>
           </div>
 
@@ -159,7 +152,7 @@ export default function Mision() {
           </span>
           <span className="legend-item">
             <span className="legend-dot" style={{ background: '#4fc3f7', opacity: 0.6 }}></span>
-            Apogeo Máximo Objetivo (525m)
+            Apogeo Máximo Objetivo (100m)
           </span>
         </div>
 
@@ -171,7 +164,7 @@ export default function Mision() {
             }))}
             color="#ffeb3b"
             yMin={0}
-            yMax={600}
+            yMax={150}
             unit="m"
             decimals={1}
           />
@@ -197,46 +190,8 @@ export default function Mision() {
           <span className="mision-stat-value" style={{color:'#ab47bc'}}>{formatUptime(misionData.t_vuelo_seg.v)}</span>
           <span className="mision-stat-sub">Crono Misión T-0</span>
         </div>
-
-        <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#66bb6a' }}>
-          <span className="mision-stat-label">CDR Fase Interna</span>
-          <span className="mision-stat-value text-green" style={{fontSize:'16px'}}>{misionData.fase_cdr}</span>
-          <span className="mision-stat-sub">Fase {misionData.fase_cdr_index + 1} de 7 (CDR Tabla 3)</span>
-        </div>
       </section>
 
-      {/* ── System Hardware Status ── */}
-      <section className="panel-card mision-hardware-grid premium-card-hover" style={{ '--card-color': '#9ca3af' }}>
-        <div>
-          <h3 className="panel-header">ESTADO DE HARDWARE DE MISIÓN</h3>
-          <div className="hw-status-list">
-            <div className="hw-status-item">
-              <span className="hw-label"><i className="fa-solid fa-sd-card fa-fw" style={{marginRight:'8px', color:'#ffb74d'}}></i>Tarjeta SD Log</span>
-              {/* CDR Corrección 7: SD Card Status set to N/A */}
-              <span className="hw-val text-yellow">{misionData.sd_card_status} (no confirmada en CDR)</span>
-            </div>
-            <div className="hw-status-item">
-              <span className="hw-label"><i className="fa-solid fa-microchip fa-fw" style={{marginRight:'8px', color:'#4fc3f7'}}></i>Procesador OBC (ESP32)</span>
-              <span className="hw-val text-green">ONLINE · 240MHz</span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="panel-header">ESTADO DE PARACAÍDAS Y SENSORES</h3>
-          <div className="hw-status-list">
-            <div className="hw-status-item">
-              <span className="hw-label"><i className="fa-solid fa-parachute-box fa-fw" style={{marginRight:'8px', color:'#66bb6a'}}></i>Sistema Desacople Paracaídas</span>
-              <span className="hw-val text-green">{misionData.altitud_m.v <= 200 ? 'ARMADO / DESPLEGADO' : 'STANDBY'}</span>
-            </div>
-            <div className="hw-status-item">
-              <span className="hw-label"><i className="fa-solid fa-compass fa-fw" style={{marginRight:'8px', color:'#ef5350'}}></i>Magnetómetro</span>
-              {/* CDR Corrección 1 */}
-              <span className="hw-val text-gray">NO DISPONIBLE (Descartado CDR 4.1)</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
     </div>
   );

@@ -14,7 +14,7 @@
   width: 100%;
 }
 .satelite-top-grid  { height: 520px; flex-shrink: 0; }
-.satelite-bottom-grid { height: 210px; flex-shrink: 0; }
+.satelite-bottom-grid { height: 240px; flex-shrink: 0; }
 
 .satelite-card {
   flex: 1;
@@ -217,13 +217,27 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+}
+/* Fila que contiene el track + el valor, en línea */
+.accel-track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.accel-track-row .accel-slider-track {
+  flex: 1;
+  min-width: 0;
 }
 .accel-status-text {
+  flex-shrink: 0;
+  width: 72px;
   text-align: right;
   font-size: 11px;
   color: #e5e7eb;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
 }
 .accel-slider-track {
   height: 5px;

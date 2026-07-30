@@ -25,9 +25,7 @@ function buildInitialData() {
     altitud_m: { v: initialRaw.altitud_m, hace_seg: 0.0, history: altHist },
     velocidad_vertical_ms: { v: initialRaw.velocidad_vertical_ms, hace_seg: 0.0, history: velHist },
     t_vuelo_seg: { v: initialRaw.t_vuelo_seg, hace_seg: 0.0 },
-    cabeceo_deg: { v: initialRaw.cabeceo_deg, hace_seg: 0.0 },
-    balanceo_deg: { v: initialRaw.balanceo_deg, hace_seg: 0.0 },
-    giro_yaw_deg: { v: initialRaw.giro_yaw_deg, hace_seg: 0.0, drift_acumulado: initialRaw.drift_acumulado_deg },
+    // cabeceo_deg, balanceo_deg, giro_yaw_deg → leer de useOrientacion3DMqtt
     sd_card_status: initialRaw.sd_card_status
   };
 }
@@ -64,9 +62,7 @@ export function useMisionMqtt() {
             altitud_m: { v: d.altitud_m.v, hace_seg: d.altitud_m.hace_seg, history: newAltHist },
             velocidad_vertical_ms: { v: d.velocidad_vertical_ms.v, hace_seg: d.velocidad_vertical_ms.hace_seg, history: newVelHist },
             t_vuelo_seg: { v: d.t_vuelo_seg.v, hace_seg: d.t_vuelo_seg.hace_seg },
-            cabeceo_deg: { v: d.cabeceo_deg.v, hace_seg: d.cabeceo_deg.hace_seg },
-            balanceo_deg: { v: d.balanceo_deg.v, hace_seg: d.balanceo_deg.hace_seg },
-            giro_yaw_deg: { v: d.giro_yaw_deg.v, hace_seg: d.giro_yaw_deg.hace_seg, drift_acumulado: d.giro_yaw_deg.drift_acumulado },
+            // cabeceo_deg, balanceo_deg, giro_yaw_deg → leer de useOrientacion3DMqtt
             sd_card_status: d.sd_card_status
           };
         });

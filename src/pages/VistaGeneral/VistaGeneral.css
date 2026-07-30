@@ -8,7 +8,7 @@
 .visor-general-row {
   display: flex;
   gap: 20px;
-  height: 330px;
+  height: 480px;
   flex-shrink: 0;
 }
 

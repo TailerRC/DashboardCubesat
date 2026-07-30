@@ -210,3 +210,35 @@
 .leaflet-control-attribution a {
   color: #9ca3af !important;
 }
+
+/* ── Pin del Satélite (Cian con pulso animado) ───────────────────── */
+.mapa-pin--cubesat .mapa-pin__dot {
+  width: 14px;
+  height: 14px;
+  background: #00e5ff;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px #00e5ff, 0 0 22px rgba(0, 229, 255, 0.55);
+  position: relative;
+  z-index: 2;
+}
+
+.mapa-pin--cubesat .mapa-pin__pulse {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 229, 255, 0.28);
+  animation: pinPulse 2s ease-out infinite;
+  z-index: 1;
+}
+
+.mapa-popup-wrapper.mapa-popup-wrapper--cyan .leaflet-popup-content-wrapper {
+  border-color: rgba(0, 229, 255, 0.35) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55),
+              0 0 18px rgba(0, 229, 255, 0.1) !important;
+}
+
+.mapa-popup-wrapper.mapa-popup-wrapper--cyan .leaflet-popup-tip {
+  background: rgba(12, 16, 22, 0.96) !important;
+}

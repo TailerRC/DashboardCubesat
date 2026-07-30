@@ -10,7 +10,7 @@ const TOPIC = 'cempai/cubesat/telemetry/ambiental';
 
 export const SENSOR_CONFIGS = {
   co2: {
-    label: 'CO₂',
+    label: 'MQ135 — CO₂ eq.',
     unit: 'ppm',
     yMin: 400,
     yMax: 5000,

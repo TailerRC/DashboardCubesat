@@ -58,19 +58,6 @@ export function getSateliteValueAtTime(key, secondsElapsed) {
       const i = getSateliteValueAtTime('corriente', t);
       return parseFloat(((v * i) / 1000).toFixed(2));
     }
-    case 'accel_x': {
-      // Constant grav + minor structural vibes
-      const vibe = Math.sin(t * 1.5) * 0.15 + (Math.sin(t * 8) * 0.05);
-      return parseFloat((9.0 + vibe).toFixed(1));
-    }
-    case 'accel_y': {
-      const vibe = Math.sin(t * 1.2) * 0.12 + (Math.sin(t * 7) * 0.04);
-      return parseFloat((7.2 + vibe).toFixed(1));
-    }
-    case 'accel_z': {
-      const vibe = Math.sin(t * 1.8) * 0.18 + (Math.sin(t * 9) * 0.06);
-      return parseFloat((8.5 + vibe).toFixed(1));
-    }
     case 'temp_mcu': {
       // Gradually heats up to 28.3C and hovers
       const temp = 26.8 + Math.min(300, Math.max(0, 3900 + t)) * 0.0003 + Math.sin(t * 0.01) * 0.1;
@@ -114,9 +101,7 @@ function publishNextPacket() {
       voltaje_v:            { v: getSateliteValueAtTime('voltaje', t), hace_seg: 0.0 },
       corriente_ma:         { v: getSateliteValueAtTime('corriente', t), hace_seg: 0.0 },
       consumo_w:            { v: getSateliteValueAtTime('consumo', t), hace_seg: 0.0 },
-      accel_x:              { v: getSateliteValueAtTime('accel_x', t), hace_seg: 0.0 },
-      accel_y:              { v: getSateliteValueAtTime('accel_y', t), hace_seg: 0.0 },
-      accel_z:              { v: getSateliteValueAtTime('accel_z', t), hace_seg: 0.0 },
+      // accel_x/y/z pertenecen exclusivamente a cempai/cubesat/telemetry/orientacion3d
       sensores_activos:     { v: getSateliteValueAtTime('sensores_activos', t), hace_seg: 0.0, total: 7 },
       temp_mcu:             { v: getSateliteValueAtTime('temp_mcu', t), hace_seg: 0.0 },
       memoria_flash_ok:     { v: getSateliteValueAtTime('memoria_flash_ok', t), hace_seg: 0.0 },

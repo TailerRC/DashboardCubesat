@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
 import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
+import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
 import './TopBar.css';
 
 export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
@@ -11,6 +12,7 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
   const { sensors: ambSensors } = useAmbientalMqtt();
   const { data: ubiData } = useUbicacionMqtt();
   const { data: satData } = useSateliteMqtt();
+  const { data: orientData } = useOrientacion3DMqtt();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -58,9 +60,9 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
   const curr = satData?.corriente_ma?.v !== undefined ? satData.corriente_ma.v.toFixed(1) : '---';
   const cons = satData?.consumo_w?.v !== undefined ? satData.consumo_w.v.toFixed(2) : '---';
   const tempMcu = satData?.temp_mcu?.v !== undefined ? satData.temp_mcu.v.toFixed(1) : '---';
-  const accX = satData?.accel_x?.v !== undefined ? satData.accel_x.v.toFixed(1) : '---';
-  const accY = satData?.accel_y?.v !== undefined ? satData.accel_y.v.toFixed(1) : '---';
-  const accZ = satData?.accel_z?.v !== undefined ? satData.accel_z.v.toFixed(1) : '---';
+  const accX = orientData?.accel_x?.v !== undefined ? orientData.accel_x.v.toFixed(1) : '---';
+  const accY = orientData?.accel_y?.v !== undefined ? orientData.accel_y.v.toFixed(1) : '---';
+  const accZ = orientData?.accel_z?.v !== undefined ? orientData.accel_z.v.toFixed(1) : '---';
   const uptime = satData?.tiempo_encendido_seg?.v !== undefined ? formatUptime(satData.tiempo_encendido_seg.v) : '---';
 
   // Raw telemetry data compile (removing unmapped packages and phase)

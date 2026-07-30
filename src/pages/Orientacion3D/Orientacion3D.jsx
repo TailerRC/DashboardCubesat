@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import CubeSatModel from '../../components/3d/CubeSatModel';
 import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
@@ -6,21 +6,11 @@ import './Orientacion3D.css';
 
 export default function Orientacion3D() {
   const { data: orientData, isConnected } = useOrientacion3DMqtt();
-  const [modo, setModo] = useState('AUTO'); // 'AUTO' | 'MANUAL'
 
-  // Orientation states
-  const [cabeceo, setCabeceo] = useState(orientData.cabeceo_deg.v);
-  const [balanceo, setBalanceo] = useState(orientData.balanceo_deg.v);
-  const [giro, setGiro] = useState(orientData.giro_yaw_deg.v);
-
-  // Auto sync orientation from telemetry when in AUTO mode
-  useEffect(() => {
-    if (modo === 'AUTO') {
-      setCabeceo(orientData.cabeceo_deg.v);
-      setBalanceo(orientData.balanceo_deg.v);
-      setGiro(orientData.giro_yaw_deg.v);
-    }
-  }, [orientData, modo]);
+  // Ángulos de Euler directamente de la telemetría MQTT (MPU6050)
+  const cabeceo = orientData.cabeceo_deg.v;
+  const balanceo = orientData.balanceo_deg.v;
+  const giro = orientData.giro_yaw_deg.v;
 
   // Convert angle range [-180, 180] to progress bar % width
   const getBarWidth = (val) => {
@@ -51,14 +41,6 @@ export default function Orientacion3D() {
                 cabeceo={cabeceo}
                 balanceo={balanceo}
                 giro={giro}
-                modo={modo}
-                onAutoUpdate={(c, b, g) => {
-                  if (modo === 'MANUAL') {
-                    setCabeceo(c);
-                    setBalanceo(b);
-                    setGiro(g);
-                  }
-                }}
               />
             </div>
           </div>
@@ -123,61 +105,6 @@ export default function Orientacion3D() {
               <div className="sensor-box"><span>X</span><span>{orientData.inercial_x.v.toFixed(2)}</span></div>
               <div className="sensor-box"><span>Y</span><span>{orientData.inercial_y.v.toFixed(2)}</span></div>
               <div className="sensor-box"><span>Z</span><span>{orientData.inercial_z.v.toFixed(2)}</span></div>
-            </div>
-          </div>
-
-          {/* Manual Control */}
-          <div className="panel-card manual-panel premium-card-hover" style={{ '--card-color': '#ffb74d' }}>
-            <h4 className="panel-header">Manual Control</h4>
-
-            <div className="slider-row">
-              <span className="slider-label">Cabeceo:</span>
-              <input
-                type="range" min="-180" max="180"
-                value={cabeceo}
-                onChange={(e) => setCabeceo(Number(e.target.value))}
-                disabled={modo === 'AUTO'}
-                className="styled-slider"
-              />
-            </div>
-            <div className="slider-row">
-              <span className="slider-label">Balanceo:</span>
-              <input
-                type="range" min="-180" max="180"
-                value={balanceo}
-                onChange={(e) => setBalanceo(Number(e.target.value))}
-                disabled={modo === 'AUTO'}
-                className="styled-slider"
-              />
-            </div>
-            <div className="slider-row">
-              <span className="slider-label">Giro:</span>
-              <input
-                type="range" min="-180" max="180"
-                value={giro}
-                onChange={(e) => setGiro(Number(e.target.value))}
-                disabled={modo === 'AUTO'}
-                className="styled-slider"
-              />
-            </div>
-          </div>
-
-          {/* Simulation Mode */}
-          <div className="panel-card mode-panel premium-card-hover" style={{ '--card-color': '#66bb6a' }}>
-            <h4 className="panel-header">Modo de Simulación</h4>
-            <div className="mode-buttons-row">
-              <button
-                className={`mode-btn ${modo === 'AUTO' ? 'active-auto' : ''}`}
-                onClick={() => setModo('AUTO')}
-              >
-                AUTO IMU
-              </button>
-              <button
-                className={`mode-btn ${modo === 'MANUAL' ? 'active-manual' : ''}`}
-                onClick={() => setModo('MANUAL')}
-              >
-                MANUAL
-              </button>
             </div>
           </div>
 

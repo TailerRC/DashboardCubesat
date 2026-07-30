@@ -20,15 +20,15 @@ let simulatedTimeSecs = 0;
 export function getUbicacionValueAtTime(secondsElapsed) {
   const cycleTime = secondsElapsed % 120;
 
-  // 1. Altitud GPS (Ascent/Descent curve)
+  // 1. Altitud GPS (Ascent/Descent curve peaking at 115m)
   let altitud = 0;
   let velocidad_vertical = 0;
   if (cycleTime < 60) {
-    altitud = Math.sin((cycleTime / 60) * (Math.PI / 2)) * 200;
-    velocidad_vertical = 5.24 * Math.cos((cycleTime / 60) * (Math.PI / 2));
+    altitud = Math.sin((cycleTime / 60) * (Math.PI / 2)) * 115;
+    velocidad_vertical = 3.0 * Math.cos((cycleTime / 60) * (Math.PI / 2));
   } else {
-    altitud = Math.cos(((cycleTime - 60) / 60) * (Math.PI / 2)) * 200;
-    velocidad_vertical = -5.24 * Math.sin(((cycleTime - 60) / 60) * (Math.PI / 2));
+    altitud = Math.cos(((cycleTime - 60) / 60) * (Math.PI / 2)) * 115;
+    velocidad_vertical = -3.0 * Math.sin(((cycleTime - 60) / 60) * (Math.PI / 2));
   }
   // Add minor noise
   altitud += (Math.random() - 0.5) * 1.5;

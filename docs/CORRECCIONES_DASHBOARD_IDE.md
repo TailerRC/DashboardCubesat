@@ -1,7 +1,7 @@
 # CORRECCIONES DE DASHBOARD — CEMPAI SPACE SYSTEMS
 ### Instrucciones para aplicar automáticamente en el código del frontend
 
-**Contexto:** Estas correcciones son **solo de diseño/etiquetado de campos** — ningún sensor nuevo, ningún cambio de hardware. El objetivo es que el dashboard solo muestre datos que el hardware real (BME280, SCD-41, GUVA-S12SD, MPU6050, NEO-6M, INA219, NRF24L01) puede efectivamente producir, eliminando campos "fantasma" que no tienen sensor detrás o que muestran constantes físicamente incorrectas.
+**Contexto:** Estas correcciones son **solo de diseño/etiquetado de campos** — ningún sensor nuevo, ningún cambio de hardware. El objetivo es que el dashboard solo muestre datos que el hardware real (BME280, **MQ135**, GUVA-S12SD, MPU6050, NEO-6M, INA219, NRF24L01) puede efectivamente producir, eliminando campos "fantasma" que no tienen sensor detrás o que muestran constantes físicamente incorrectas. *(Nota: el SCD-41 fue reemplazado por el MQ135 — el campo JSON `co2_ppm` se mantiene igual.)*
 
 No se agrega hardware. Todo se resuelve con: (a) eliminar un campo, (b) renombrar/re-etiquetar un campo, o (c) recalcular un campo a partir de datos que YA se generan en otro punto del sistema.
 
@@ -195,7 +195,7 @@ Campos que deben **corregirse en su lógica de generación**:
 - ✅ `sd_card_status` → fijo en `"N/A"` hasta confirmación de hardware
 
 Campos que se mantienen sin cambios (ya correctos y con sensor real confirmado):
-- ✅ CO2 (SCD-41), Temperatura/Humedad/Presión (BME280), UV (GUVA-S12SD)
+- ✅ CO2 eq. (MQ135 — ADC analógico, calibrado en firmware), Temperatura/Humedad/Presión (BME280), UV (GUVA-S12SD)
 - ✅ Latitud/Longitud/Altitud GPS/Velocidad/Satélites visibles/HDOP (NEO-6M)
 - ✅ Voltaje/Corriente/Consumo (INA219)
 - ✅ Aceleración X/Y/Z, Roll, Pitch (MPU6050)

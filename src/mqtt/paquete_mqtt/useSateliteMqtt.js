@@ -9,14 +9,13 @@ const KEY_MAP = {
   voltaje_v: 'voltaje',
   corriente_ma: 'corriente',
   consumo_w: 'consumo',
-  accel_x: 'accel_x',
-  accel_y: 'accel_y',
-  accel_z: 'accel_z',
+  // accel_x/y/z → exclusivos de useOrientacion3DMqtt (topic: orientacion3d)
   sensores_activos: 'sensores_activos',
   temp_mcu: 'temp_mcu',
   memoria_flash_ok: 'memoria_flash_ok',
   tiempo_encendido_seg: 'tiempo_encendido_seg'
 };
+
 
 function buildInitialHistory(fieldKey) {
   const points = [];

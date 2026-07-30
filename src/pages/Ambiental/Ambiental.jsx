@@ -67,7 +67,7 @@ function TutorialModal({ onClose }) {
               <tbody>
                 <tr>
                   <td><i className="fa-solid fa-smog" style={{ color: '#f9a825' }}></i></td>
-                  <td>CO₂</td><td>400–1000</td><td>&gt; 1000</td><td>ppm</td>
+                  <td>CO₂ eq. <span style={{fontSize:'10px',opacity:0.6}}>(MQ135)</span></td><td>400–1000</td><td>&gt; 1000</td><td>ppm</td>
                 </tr>
                 <tr>
                   <td><i className="fa-solid fa-temperature-half" style={{ color: '#ff7043' }}></i></td>
@@ -217,7 +217,7 @@ const GAUGE_INFO = {
 
 const SENSOR_META = {
   co2_ppm: {
-    title: 'CONCENTRACIÓN DE CO₂',
+    title: 'CALIDAD DE AIRE — CO₂ eq. (MQ135)',
     icon: 'fa-solid fa-smog',
     unit: 'ppm',
     color: '#f9a825'

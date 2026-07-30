@@ -43,12 +43,13 @@ const MapaOrbital = () => {
     // ── Crear mapa ──────────────────────────────────────────────────────
     const map = L.map(mountRef.current, {
       center:             [LIMA.lat, LIMA.lon],
-      zoom:               7,
+      zoom:               13,
       zoomControl:        true,
       attributionControl: true,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // Usar tiles de color negro / dark-mode de CartoDB
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom:     19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
     }).addTo(map);
@@ -56,7 +57,7 @@ const MapaOrbital = () => {
 
     mapRef.current = map;
 
-    // ── Helper: coloca / mueve el pin verde (sin auto-abrir popup) ───────
+    // ── Helper: coloca / mueve el pin verde (mi ubicación) ───────
     const colocarPin = (lat, lon, precision) => {
       const precText = precision
         ? `<span class="mapa-popup__accuracy"><i class="fa-solid fa-circle-dot" style="margin-right:4px;font-size:9px"></i>Precisión: ±${Math.round(precision)} m</span>`
@@ -65,7 +66,7 @@ const MapaOrbital = () => {
       const html = `
         <div class="mapa-popup">
           <div class="mapa-popup__title" style="color:#00ff66">
-            <i class="fa-solid fa-location-dot" style="margin-right:6px"></i>Mi ubicación
+            <i class="fa-solid fa-location-dot" style="margin-right:6px"></i>Estación Terrena
           </div>
           <div class="mapa-popup__coords">
             <span>Lat: <strong>${lat.toFixed(5)}°</strong></span>
@@ -75,7 +76,6 @@ const MapaOrbital = () => {
         </div>`;
 
       if (miMarkerRef.current) {
-        // Solo actualizar posición y contenido — NO abrir popup
         miMarkerRef.current.setLatLng([lat, lon]);
         miMarkerRef.current.getPopup().setContent(html);
       } else {
@@ -87,14 +87,12 @@ const MapaOrbital = () => {
           closeOnClick: false,
         }).setContent(html);
 
-        // bindPopup pero SIN openPopup — el usuario lo abre al hacer click
         miMarkerRef.current = L.marker([lat, lon], {
           icon:         iconoMiUbicacion,
           zIndexOffset: 1000,
         })
           .addTo(map)
           .bindPopup(popup);
-        // ← sin .openPopup()
       }
 
       map.setView([lat, lon], precision && precision < 500 ? 15 : 13);
@@ -103,12 +101,19 @@ const MapaOrbital = () => {
     // Colocar pin en Lima inmediatamente (visible, sin popup abierto)
     colocarPin(LIMA.lat, LIMA.lon, null);
 
-    // Luego actualizar con la ubicación real del navegador
+    // Luego actualizar con la ubicación real del navegador (con robustez / fallback)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => colocarPin(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
-        (err) => console.warn('[MapaOrbital] Geolocation error:', err.message),
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+        (err) => {
+          console.warn('[MapaOrbital] Geolocation error (high accuracy), trying low accuracy:', err.message);
+          navigator.geolocation.getCurrentPosition(
+            (pos2) => colocarPin(pos2.coords.latitude, pos2.coords.longitude, pos2.coords.accuracy),
+            (err2) => console.error('[MapaOrbital] Geolocation failed completely:', err2.message),
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+          );
+        },
+        { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
       );
     }
 
@@ -140,7 +145,7 @@ const MapaOrbital = () => {
       const marker = L.marker([lat, lng], { icon: iconoClick })
         .addTo(map)
         .bindPopup(popup)
-        .openPopup();   // ← el click sí abre el popup inmediatamente
+        .openPopup();
 
       marker.on('popupclose', () => { marker.remove(); clickMarkerRef.current = null; });
       clickMarkerRef.current = marker;

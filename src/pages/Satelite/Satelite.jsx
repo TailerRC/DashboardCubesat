@@ -1,11 +1,14 @@
 import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
 import './Satelite.css';
 
 export default function Satelite() {
   const { data: satData, isConnected: satConnected } = useSateliteMqtt();
   const { data: ubiData } = useUbicacionMqtt();
+  // accel_x/y/z vienen del tópico orientacion3d (fuente única: MPU6050)
+  const { data: orientData } = useOrientacion3DMqtt();
 
   // 1. Voltaje Batería
   const voltVal = satData.voltaje_v.v;
@@ -30,10 +33,10 @@ export default function Satelite() {
   const consVals = consHistory.map(h => h.value);
   const maxConsVal = consVals.length > 0 ? Math.max(...consVals) : consVal;
 
-  // 4. Acelerómetro
-  const accelX = satData.accel_x.v;
-  const accelY = satData.accel_y.v;
-  const accelZ = satData.accel_z.v;
+  // 4. Acelerómetro — fuente: orientacion3d (MPU6050, tópico único)
+  const accelX = orientData.accel_x.v;
+  const accelY = orientData.accel_y.v;
+  const accelZ = orientData.accel_z.v;
 
   const getSliderLeft = (val) => {
     return Math.max(0, Math.min(100, ((val + 20) / 40) * 100)) + '%';
@@ -184,9 +187,11 @@ export default function Satelite() {
             <div className="accel-row">
               <span className="accel-label text-red">X</span>
               <div className="accel-gauge-wrapper">
-                <div className="accel-status-text">{accelX >= 0 ? '+' : ''}{accelX.toFixed(1)} m/s²</div>
-                <div className="accel-slider-track">
-                  <div className="accel-indicator" style={{ left: getSliderLeft(accelX), backgroundColor: '#ef5350' }}></div>
+                <div className="accel-track-row">
+                  <div className="accel-slider-track">
+                    <div className="accel-indicator" style={{ left: getSliderLeft(accelX), backgroundColor: '#ef5350' }}></div>
+                  </div>
+                  <span className="accel-status-text">{accelX >= 0 ? '+' : ''}{accelX.toFixed(1)} m/s²</span>
                 </div>
                 <div className="accel-ticks">
                   <span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span>
@@ -197,9 +202,11 @@ export default function Satelite() {
             <div className="accel-row">
               <span className="accel-label text-yellow">Y</span>
               <div className="accel-gauge-wrapper">
-                <div className="accel-status-text">{accelY >= 0 ? '+' : ''}{accelY.toFixed(1)} m/s²</div>
-                <div className="accel-slider-track">
-                  <div className="accel-indicator" style={{ left: getSliderLeft(accelY), backgroundColor: '#ffca28' }}></div>
+                <div className="accel-track-row">
+                  <div className="accel-slider-track">
+                    <div className="accel-indicator" style={{ left: getSliderLeft(accelY), backgroundColor: '#ffca28' }}></div>
+                  </div>
+                  <span className="accel-status-text">{accelY >= 0 ? '+' : ''}{accelY.toFixed(1)} m/s²</span>
                 </div>
                 <div className="accel-ticks">
                   <span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span>
@@ -210,9 +217,11 @@ export default function Satelite() {
             <div className="accel-row">
               <span className="accel-label text-green">Z</span>
               <div className="accel-gauge-wrapper">
-                <div className="accel-status-text">{accelZ >= 0 ? '+' : ''}{accelZ.toFixed(1)} m/s²</div>
-                <div className="accel-slider-track">
-                  <div className="accel-indicator" style={{ left: getSliderLeft(accelZ), backgroundColor: '#66bb6a' }}></div>
+                <div className="accel-track-row">
+                  <div className="accel-slider-track">
+                    <div className="accel-indicator" style={{ left: getSliderLeft(accelZ), backgroundColor: '#66bb6a' }}></div>
+                  </div>
+                  <span className="accel-status-text">{accelZ >= 0 ? '+' : ''}{accelZ.toFixed(1)} m/s²</span>
                 </div>
                 <div className="accel-ticks">
                   <span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span>
@@ -237,6 +246,10 @@ export default function Satelite() {
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-memory fa-fw" style={{color:'#66bb6a', marginRight:'6px'}}></i>Memoria Flash</span>
               <span className="sys-value text-green">{flashOk ? 'OK' : 'ERROR'}</span>
+            </div>
+            <div className="system-status-item">
+              <span className="sys-label"><i className="fa-solid fa-microchip fa-fw" style={{color:'#4fc3f7', marginRight:'6px'}}></i>Procesador OBC (ESP32)</span>
+              <span className="sys-value text-green">ONLINE · 240MHz</span>
             </div>
             <div className="system-status-item">
               <span className="sys-label"><i className="fa-solid fa-satellite fa-fw" style={{color:'#4fc3f7', marginRight:'6px'}}></i>GPS Fix</span>

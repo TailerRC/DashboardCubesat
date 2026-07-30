@@ -50,23 +50,23 @@ export function getMisionDataAtTime(secondsElapsed) {
     altitud = 0;
     velVert = 0;
   } else if (cycleTime < 420) {
-    // 120-420s: Ascent (300s duration, climbs to 525m)
+    // 120-420s: Ascent (300s duration, climbs to 115m)
     faseCdrIdx = 2;
     const progress = (cycleTime - 120) / 300;
-    altitud = 525 * Math.sin(progress * (Math.PI / 2));
-    velVert = (525 * (Math.PI / 2) / 300) * Math.cos(progress * (Math.PI / 2));
+    altitud = 115 * Math.sin(progress * (Math.PI / 2));
+    velVert = (115 * (Math.PI / 2) / 300) * Math.cos(progress * (Math.PI / 2));
   } else if (cycleTime < 480) {
-    // 420-480s: Apogee & Decouple (525m to 510m)
+    // 420-480s: Apogee & Decouple (115m to 110m)
     faseCdrIdx = 3;
     const progress = (cycleTime - 420) / 60;
-    altitud = 525 - (15 * progress);
-    velVert = -0.25;
+    altitud = 115 - (5 * progress);
+    velVert = -0.08;
   } else if (cycleTime < 1080) {
-    // 480-1080s: Controlled Descent (600s duration, 510m to 0m)
+    // 480-1080s: Controlled Descent (600s duration, 110m to 0m)
     faseCdrIdx = 4;
     const progress = (cycleTime - 480) / 600;
-    altitud = 510 * (1 - progress);
-    velVert = -0.85;
+    altitud = 110 * (1 - progress);
+    velVert = -0.18; // 110m / 600s
   } else if (cycleTime < 1140) {
     // 1080-1140s: Landing
     faseCdrIdx = 5;
@@ -104,10 +104,7 @@ export function getMisionDataAtTime(secondsElapsed) {
     altitud_m: parseFloat(altitud.toFixed(1)),
     velocidad_vertical_ms: parseFloat(velVert.toFixed(2)),
     t_vuelo_seg: Math.floor(cycleTime),
-    cabeceo_deg: cabeceo,
-    balanceo_deg: balanceo,
-    giro_yaw_deg: giro,
-    drift_acumulado_deg: accumulatedDrift,
+    // cabeceo_deg, balanceo_deg, giro_yaw_deg → exclusivos de orientacion3d
     sd_card_status: 'N/A' // CDR Correction 7
   };
 }
@@ -136,9 +133,7 @@ function publishNextPacket() {
       altitud_m: { v: raw.altitud_m, hace_seg: 0.0 },
       velocidad_vertical_ms: { v: raw.velocidad_vertical_ms, hace_seg: 0.0 },
       t_vuelo_seg: { v: raw.t_vuelo_seg, hace_seg: 0.0 },
-      cabeceo_deg: { v: raw.cabeceo_deg, hace_seg: 0.0 },
-      balanceo_deg: { v: raw.balanceo_deg, hace_seg: 0.0 },
-      giro_yaw_deg: { v: raw.giro_yaw_deg, hace_seg: 0.0, drift_acumulado: raw.drift_acumulado_deg },
+      // cabeceo_deg, balanceo_deg, giro_yaw_deg → leer de orientacion3d
       sd_card_status: raw.sd_card_status
     };
   }
