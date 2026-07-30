@@ -185,7 +185,7 @@ void publicarAmbiental() {
   bool alert = (co2_ppm > 1000) || (temp_c > 40) ||
                (hum_pct > 85)   || (fabsf(pres_rel) > 45) || (uv_idx > 7.5);
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["topic"]            = TOPIC_AMBIENTAL;
   doc["packet_id"]        = pkt_amb;
   doc["received"]         = true;
@@ -209,7 +209,7 @@ void publicarAmbiental() {
   JsonObject uv   = data.createNestedObject("radiacion_uv");
   uv["v"]   = round(uv_idx * 10)  / 10.0;   uv["hace_seg"]   = 0.0; uv["umbral_alerta"]   = 7.5;
 
-  char buffer[512];
+  char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_AMBIENTAL, buffer, bytes);
   Serial.printf("[TX AMB] pkt#%d (%d bytes)\n", pkt_amb, bytes);
@@ -235,7 +235,7 @@ void publicarSatelite() {
   float    temp_mcu = temperatureRead();
   uint32_t uptime   = millis() / 1000;
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_SATELITE;
   doc["packet_id"]  = pkt_sat;
   doc["received"]   = true;
@@ -264,7 +264,7 @@ void publicarSatelite() {
   JsonObject sens = data.createNestedObject("sensores_activos");
   sens["v"] = 7;  sens["total"] = 7;  sens["hace_seg"] = 0.0;
 
-  char buffer[512];
+  char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_SATELITE, buffer, bytes);
   Serial.printf("[TX SAT] pkt#%d (%d bytes)\n", pkt_sat, bytes);
@@ -290,7 +290,7 @@ void publicarUbicacion() {
     sprintf(hora, "%02d:%02d:%02d", gps.time.hour(), gps.time.minute(), gps.time.second());
   else strcpy(hora, "00:00:00");
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_UBICACION;
   doc["packet_id"]  = pkt_gps;
   doc["received"]   = true;
@@ -322,7 +322,7 @@ void publicarUbicacion() {
   aterrizaje["lat"] = -12.0780;   // Coordenada de aterrizaje prevista (ajustar)
   aterrizaje["lon"] = -77.0850;
 
-  char buffer[512];
+  char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_UBICACION, buffer, bytes);
   Serial.printf("[TX GPS] pkt#%d lat=%.6f lon=%.6f alt=%.1fm\n",
@@ -363,7 +363,7 @@ void publicarOrientacion3D() {
   }
   yaw_deg = fmodf(yaw_deg + 360.0f, 360.0f);
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_ORIENTACION;
   doc["packet_id"]  = pkt_ori;
   doc["received"]   = true;
@@ -399,7 +399,7 @@ void publicarOrientacion3D() {
   data["inercial_z"]["v"]  = round(fabsf(accel_z * 9.81f) * 0.1f * 100) / 100.0;
   data["inercial_z"]["hace_seg"] = 0.0;
 
-  char buffer[512];
+  char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_ORIENTACION, buffer, bytes);
   Serial.printf("[TX ORI] pkt#%d pitch=%.1f roll=%.1f yaw=%.1f\n",
@@ -464,7 +464,7 @@ void publicarMision() {
   // Sub-estado: PROXIMIDAD AL SUELO si descendiendo a baja altura
   if (fase_idx == 4 && altitud_m <= 20.0f) fase_ui = "PROXIMIDAD AL SUELO";
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_MISION;
   doc["packet_id"]  = pkt_mis;
   doc["received"]   = true;
@@ -492,7 +492,7 @@ void publicarMision() {
   yaw_obj["hace_seg"]        = 0.0;
   yaw_obj["drift_acumulado"] = round(drift_mis * 100) / 100.0;
 
-  char buffer[512];
+  char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_MISION, buffer, bytes);
   Serial.printf("[TX MIS] pkt#%d fase=%s alt=%.1fm\n",
@@ -535,7 +535,7 @@ void publicarComunicacion(bool paqueteRecibido, bool crcOk) {
   else if (!crcOk)           sprintf(logText, "PKT#%03d - Checksum Error (CRC Invalid)", pkt_com);
   else                       sprintf(logText, "PKT#%03d - CMD:ACK - OBC ONLINE", pkt_com);
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_COMUNICACION;
   doc["packet_id"]  = pkt_com;
   doc["received"]   = paqueteRecibido;
@@ -568,7 +568,7 @@ void publicarComunicacion(bool paqueteRecibido, bool crcOk) {
   JsonArray pkts_window = data.createNestedArray("pkts_window");
   for (int i = 0; i < 20; i++) pkts_window.add(recentWindow[i]);
 
-  char buffer[512];
+  char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_COMUNICACION, buffer, bytes);
   Serial.printf("[TX COM] pkt#%d calidad=%.1f%% %s\n",

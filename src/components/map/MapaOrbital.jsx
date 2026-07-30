@@ -59,6 +59,7 @@ const MapaOrbital = () => {
 
     // ── Helper: coloca / mueve el pin verde (mi ubicación) ───────
     const colocarPin = (lat, lon, precision) => {
+      if (!mapRef.current) return;
       const precText = precision
         ? `<span class="mapa-popup__accuracy"><i class="fa-solid fa-circle-dot" style="margin-right:4px;font-size:9px"></i>Precisión: ±${Math.round(precision)} m</span>`
         : '';

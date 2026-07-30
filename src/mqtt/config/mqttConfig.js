@@ -1,3 +1,5 @@
+import mqtt from 'mqtt';
+
 // ── MQTT Service — Modular Pub-Sub Broker ───────────────────────────────────
 // Acts as a client wrapper. In development, it uses an in-memory pub-sub bus.
 // To switch to a live broker (e.g. HiveMQ over WebSockets), set USE_REAL_MQTT to true
@@ -22,11 +24,10 @@ class MqttBroker {
    */
   async initRealMqtt() {
     try {
-      // Dynamic import with variable string to completely bypass Vite static analysis
-      const libraryName = 'mqtt';
-      const mqtt = await import(/* @vite-ignore */ libraryName);
       this.client = mqtt.connect(REAL_MQTT_BROKER_URL, {
         clientId: 'cempai_dashboard_' + Math.random().toString(16).substring(2, 8),
+        username: 'Dashboard',
+        password: 'cempai123',
         clean: true,
         connectTimeout: 4000,
         reconnectPeriod: 1000,
@@ -41,11 +42,12 @@ class MqttBroker {
       });
 
       this.client.on('message', (topic, message) => {
+        const rawStr = message.toString();
         try {
-          const parsed = JSON.parse(message.toString());
+          const parsed = JSON.parse(rawStr);
           this.triggerLocalPublish(topic, parsed);
         } catch (e) {
-          console.error(`[MQTT] Failed to parse message on topic: ${topic}`, e);
+          console.error(`[MQTT] Failed to parse message on topic: ${topic}. Raw payload: "${rawStr}"`, e);
         }
       });
 

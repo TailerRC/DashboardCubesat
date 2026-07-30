@@ -555,7 +555,7 @@ void publish_ambiental() {
   addSensor("presion_pa",   cache.pres_rel, 45);
   addSensor("radiacion_uv", cache.uv_idx,   7.5);
 
-  char buffer[512];
+  char buffer[1024];
   serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_AMBIENTAL, buffer);
 }
@@ -587,7 +587,7 @@ void publish_satelite() {
   JsonObject flash = data["memoria_flash_ok"].to<JsonObject>();
   flash["v"] = true; flash["hace_seg"] = 0.0;
 
-  char buffer[512];
+  char buffer[1024];
   serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_SATELITE, buffer);
 }
@@ -633,7 +633,7 @@ void publish_ubicacion() {
   aterrizaje["lat"] = -12.0780;
   aterrizaje["lon"] = -77.0850;
 
-  char buffer[512];
+  char buffer[1024];
   serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_UBICACION, buffer);
 }
@@ -669,7 +669,7 @@ void publish_orientacion3d() {
   yaw_obj["hace_seg"]        = 0.0;
   yaw_obj["drift_acumulado"] = roundf(cache.drift * 100) / 100.0f;
 
-  char buffer[512];
+  char buffer[1024];
   serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_ORIENTACION, buffer);
 }
@@ -716,7 +716,7 @@ void publish_mision() {
 
   data["sd_card_status"] = "N/A";
 
-  char buffer[512];
+  char buffer[1024];
   serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_MISION, buffer);
 }
@@ -779,7 +779,7 @@ void publish_comunicacion(bool paqueteRecibido, bool crcOk) {
   JsonArray pkts_window = data["pkts_window"].to<JsonArray>();
   for (int i = 0; i < 20; i++) pkts_window.add(recentWindow[i]);
 
-  char buffer[512];
+  char buffer[1024];
   serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_COMUNICACION, buffer);
 }
