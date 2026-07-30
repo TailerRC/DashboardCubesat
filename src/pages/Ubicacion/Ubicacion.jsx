@@ -36,9 +36,12 @@ export default function Ubicacion() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Center on San Miguel, Lima
+    const initialLat = data.latitud.v;
+    const initialLon = data.longitud.v;
+
+    // Center on telemetry location
     const map = L.map(mapRef.current, {
-      center: [-12.0850, -77.0900],
+      center: [initialLat, initialLon],
       zoom: 15,
       zoomControl: true,
       attributionControl: false
@@ -50,7 +53,7 @@ export default function Ubicacion() {
     }).addTo(map);
 
     // Current location marker
-    const marker = L.marker([-12.0850, -77.0900], { icon: satelliteIcon })
+    const marker = L.marker([initialLat, initialLon], { icon: satelliteIcon })
       .addTo(map)
       .bindPopup('<b>Cubesat CEMPAI</b><br>GPS: u-blox NEO-7M<br>Estableciendo señal...');
 

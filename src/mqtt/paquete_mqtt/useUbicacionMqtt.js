@@ -48,8 +48,9 @@ export function useUbicacionMqtt() {
   const [lastPacketId, setLastPacketId] = useState(null);
   const [lastValidPacketTime, setLastValidPacketTime] = useState(null);
 
-  // Reference for tracking age of data points
+  // Reference for tracking age of data points and detecting first real telemetry packet
   const lastValidRecvTimeRef = useRef({});
+  const isFirstRealPacketRef = useRef(true);
 
   useEffect(() => {
     const now = Date.now();
@@ -73,17 +74,27 @@ export function useUbicacionMqtt() {
         if (!isPacketLostOrCorrupt) {
           setLastValidPacketTime(packetTime);
 
+          const isFirstReal = isFirstRealPacketRef.current;
+          if (isFirstReal) {
+            isFirstRealPacketRef.current = false;
+          }
+
           // Update static NMEA outputs
-          nextState.fecha_utc = packet.data.fecha_utc;
-          nextState.hora_utc = packet.data.hora_utc;
-          nextState.coordenadas_aterrizaje = packet.data.coordenadas_aterrizaje;
+          nextState.fecha_utc = packet.data.fecha_utc || prev.fecha_utc;
+          nextState.hora_utc = packet.data.hora_utc || prev.hora_utc;
+          nextState.coordenadas_aterrizaje = packet.data.coordenadas_aterrizaje || (
+            packet.data.latitud && packet.data.longitud
+              ? { lat: packet.data.latitud.v, lon: packet.data.longitud.v }
+              : prev.coordenadas_aterrizaje
+          );
 
           // Update each numeric key
           keys.forEach(key => {
             const rawVal = packet.data[key];
             if (rawVal) {
               const val = rawVal.v;
-              let history = prev[key].history || [];
+              // If it's the first real packet, purge mock history!
+              let history = isFirstReal ? [] : (prev[key].history || []);
 
               if (key === 'altitud_gps' || key === 'distancia_origen' || key === 'latitud' || key === 'longitud') {
                 history = [...history, { value: val, timestamp: packetTime }];
@@ -103,7 +114,7 @@ export function useUbicacionMqtt() {
             }
           });
         } else {
-          // Packet loss / CRC fail: keep last value but mark as stale, append last known values to history
+          // Packet loss / CRC fail: keep last value but mark as stale
           keys.forEach(key => {
             let history = prev[key].history || [];
 
