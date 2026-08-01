@@ -5,41 +5,25 @@ const TOPIC = 'cempai/cubesat/telemetry/comunicacion';
 const HISTORY_SIZE = 20;
 const MAX_LOG_ENTRIES = 20;
 
-function buildInitialData() {
-  const now = Date.now();
-  const calidadHist = [];
-  for (let i = 0; i < HISTORY_SIZE; i++) {
-    calidadHist.push({ value: 95.0 - Math.random() * 5, timestamp: now - (HISTORY_SIZE - 1 - i) * 1000 });
-  }
-
-  const initialLogs = [
-    { timestamp: '08:13:20', status: 'RX OK', text: 'PKT#001 - OBC System initialized' },
-    { timestamp: '08:13:21', status: 'RX OK', text: 'PKT#002 - NRF24L01 RF Link established at 2.401 GHz' },
-    { timestamp: '08:13:22', status: 'RX OK', text: 'PKT#003 - CO2:409 T:23.3 H:66.0' },
-    { timestamp: '08:13:23', status: 'RX ERROR', text: 'PKT#004 - Checksum Error (CRC Invalid)' },
-    { timestamp: '08:13:24', status: 'RX OK', text: 'PKT#005 - GPS 3D Fix acquired (8 sats)' }
-  ];
-
-  return {
-    paquetes_enviados: { v: 5880, hace_seg: 0.0 },
-    paquetes_recibidos: { v: 5620, hace_seg: 0.0 },
-    paquetes_perdidos: { v: 260, hace_seg: 0.0 },
-    frecuencia_ghz: { v: 2.401, hace_seg: 0.0 },
-    canal_nrf24: { v: 1 },
-    calidad_enlace_pct: { v: 94.0, hace_seg: 0.0, history: calidadHist },
-    calidad_label: 'Buena',
-    baudios_debug: { v: 9600 },
-    tasa_aire_nrf24_kbps: { v: 2000 },
-    ultimo_pkt_timestamp: '08:13:24',
-    logEntries: initialLogs,
-    pkts_window: Array(30).fill('ok')
-  };
-}
-
 export function useComunicacionMqtt() {
-  const [data, setData] = useState(buildInitialData);
+  const [data, setData] = useState(() => {
+    return {
+      paquetes_enviados: { v: 0, hace_seg: 0.0 },
+      paquetes_recibidos: { v: 0, hace_seg: 0.0 },
+      paquetes_perdidos: { v: 0, hace_seg: 0.0 },
+      frecuencia_ghz: { v: 0, hace_seg: 0.0 },
+      canal_nrf24: { v: 0 },
+      calidad_enlace_pct: { v: 0, hace_seg: 0.0, history: [] },
+      calidad_label: '---',
+      baudios_debug: { v: 0 },
+      tasa_aire_nrf24_kbps: { v: 0 },
+      ultimo_pkt_timestamp: '---',
+      logEntries: [],
+      pkts_window: Array(30).fill('error')
+    };
+  });
   const [lastPacketId, setLastPacketId] = useState(null);
-  const [lastValidPacketTime, setLastValidPacketTime] = useState(Date.now());
+  const [lastValidPacketTime, setLastValidPacketTime] = useState(null);
 
   useEffect(() => {
     const handleMessage = (packet) => {

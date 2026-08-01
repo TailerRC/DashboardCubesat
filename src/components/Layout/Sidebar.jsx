@@ -10,6 +10,7 @@ const navItems = [
   { path: '/mision', label: 'Misión', icon: 'rocket' },
   { path: '/comunicacion', label: 'Comunicación', icon: 'comm' },
   { path: '/orientacion3d', label: 'Orientación 3D', icon: 'cube' },
+  { path: '/vision', label: 'Visión', icon: 'vision' },
 ];
 
 const iconMap = {
@@ -20,6 +21,7 @@ const iconMap = {
   rocket: <i className="fa-solid fa-rocket"></i>,
   comm: <i className="fa-solid fa-tower-broadcast"></i>,
   cube: <i className="fa-solid fa-cube"></i>,
+  vision: <i className="fa-solid fa-eye"></i>,
 };
 
 export default function Sidebar() {

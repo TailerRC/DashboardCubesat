@@ -1,47 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { MqttService } from '../config/mqttConfig';
-import { getUbicacionValueAtTime } from '../simulacion/ubicacionMock';
 
 const TOPIC = 'cempai/cubesat/telemetry/ubicacion';
 const HISTORY_SIZE = 20;
 
-function buildInitialHistory(key) {
-  const points = [];
-  const now = Date.now();
-  for (let i = 0; i < HISTORY_SIZE; i++) {
-    const agoSecs = (HISTORY_SIZE - 1 - i) * 1.5;
-    const values = getUbicacionValueAtTime(-agoSecs);
-    let value = 0;
-    if (key === 'altitud') value = values.altitud;
-    else if (key === 'distancia') value = values.distancia;
-    else if (key === 'latitud') value = values.latitud;
-    else if (key === 'longitud') value = values.longitud;
-    points.push({ value, timestamp: now - (agoSecs * 1000) });
-  }
-  return points;
-}
-
 export function useUbicacionMqtt() {
   const [dataState, setDataState] = useState(() => {
-    const initAltHist = buildInitialHistory('altitud');
-    const initDistHist = buildInitialHistory('distancia');
-    const initLatHist = buildInitialHistory('latitud');
-    const initLonHist = buildInitialHistory('longitud');
-    const latestValues = getUbicacionValueAtTime(0);
-
     return {
-      latitud: { v: latestValues.latitud, hace_seg: 0.0, stale: false, history: initLatHist },
-      longitud: { v: latestValues.longitud, hace_seg: 0.0, stale: false, history: initLonHist },
-      altitud_gps: { v: latestValues.altitud, hace_seg: 0.0, stale: false, history: initAltHist },
-      velocidad_kmh: { v: latestValues.velocidad, hace_seg: 0.0, stale: false },
-      velocidad_vertical: { v: latestValues.velocidad_vertical, hace_seg: 0.0, stale: false },
-      satelites: { v: latestValues.satelites, hace_seg: 0.0, stale: false },
-      hdop: { v: 0.8, hace_seg: 0.0, stale: false },
-      calidad_senal: { v: latestValues.calidad, hace_seg: 0.0, stale: false },
-      distancia_origen: { v: latestValues.distancia, hace_seg: 0.0, stale: false, history: initDistHist },
-      fecha_utc: '2026-03-24',
-      hora_utc: '21:00:23',
-      coordenadas_aterrizaje: { lat: -12.4123, lon: -77.2078 }
+      latitud: { v: 0, hace_seg: 0.0, stale: false, history: [] },
+      longitud: { v: 0, hace_seg: 0.0, stale: false, history: [] },
+      altitud_gps: { v: 0, hace_seg: 0.0, stale: false, history: [] },
+      velocidad_kmh: { v: 0, hace_seg: 0.0, stale: false },
+      velocidad_vertical: { v: 0, hace_seg: 0.0, stale: false },
+      satelites: { v: 0, hace_seg: 0.0, stale: false },
+      hdop: { v: 0, hace_seg: 0.0, stale: false },
+      calidad_senal: { v: 0, hace_seg: 0.0, stale: false },
+      distancia_origen: { v: 0, hace_seg: 0.0, stale: false, history: [] },
+      fecha_utc: '---',
+      hora_utc: '---',
+      coordenadas_aterrizaje: { lat: 0, lon: 0 }
     };
   });
 

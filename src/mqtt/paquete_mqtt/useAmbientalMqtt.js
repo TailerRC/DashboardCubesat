@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MqttService } from '../config/mqttConfig';
-import { SENSOR_CONFIGS, getSensorValueAtTime } from '../simulacion/ambientalMock';
+import { SENSOR_CONFIGS } from '../simulacion/ambientalMock';
 
 const TOPIC = 'cempai/cubesat/telemetry/ambiental';
 const HISTORY_SIZE = 20;
@@ -13,32 +13,17 @@ const KEY_MAP = {
   presion_pa: 'pres'
 };
 
-function buildInitialHistory(sensorKey) {
-  const points = [];
-  const mockKey = KEY_MAP[sensorKey];
-  const now = Date.now();
-  for (let i = 0; i < HISTORY_SIZE; i++) {
-    // Spaced by 1.5s to fill a nice 30s window on start
-    const agoSecs = (HISTORY_SIZE - 1 - i) * 1.5;
-    const value = getSensorValueAtTime(mockKey, -agoSecs);
-    points.push({ value, timestamp: now - (agoSecs * 1000) });
-  }
-  return points;
-}
-
 export function useAmbientalMqtt() {
   const [sensors, setSensors] = useState(() => {
     const initial = {};
     Object.keys(KEY_MAP).forEach(key => {
-      const hist = buildInitialHistory(key);
-      const latestVal = hist[hist.length - 1].value;
       const mockKey = KEY_MAP[key];
       const threshold = SENSOR_CONFIGS[mockKey]?.threshold ?? null;
       initial[key] = {
-        v: latestVal,
+        v: 0,
         hace_seg: 0.0,
         stale: false,
-        history: hist,
+        history: [],
         umbral_alerta: threshold
       };
     });
@@ -65,7 +50,7 @@ export function useAmbientalMqtt() {
   // Calculate active alerts and global state whenever sensors state updates or connection state changes
   useEffect(() => {
     const now = Date.now();
-    
+
     // If no packet has ever been received, or connection is lost (no packet for > 5s)
     if (lastValidPacketTime === null || (now - lastValidPacketTime > 5000)) {
       setEstadoAmbiental('SIN_DATOS');
@@ -130,7 +115,7 @@ export function useAmbientalMqtt() {
         const nextSensors = {};
         Object.keys(prev).forEach(key => {
           const prevSensor = prev[key];
-          
+
           let val = prevSensor.v;
           let hace_seg = prevSensor.hace_seg;
           let umbral_alerta = prevSensor.umbral_alerta;
@@ -141,11 +126,11 @@ export function useAmbientalMqtt() {
             if (sensorVal) {
               val = parseFloat(sensorVal.v.toFixed(2));
               hace_seg = sensorVal.hace_seg;
-              umbral_alerta = (sensorVal.umbral_alerta !== undefined && sensorVal.umbral_alerta !== null) 
-                ? sensorVal.umbral_alerta 
+              umbral_alerta = (sensorVal.umbral_alerta !== undefined && sensorVal.umbral_alerta !== null)
+                ? sensorVal.umbral_alerta
                 : SENSOR_CONFIGS[KEY_MAP[key]].threshold;
               stale = false;
-              
+
               // Store timestamp when this valid value arrived
               lastValidRecvTimeRef.current[key] = packetTime - (hace_seg * 1000);
             }
@@ -156,7 +141,7 @@ export function useAmbientalMqtt() {
           // Append to history
           const prevHist = prevSensor.history || [];
           const shiftedHist = [...prevHist];
-          
+
           // Use packetTime as the timestamp for this data point
           shiftedHist.push({ value: val, timestamp: packetTime });
 
@@ -177,7 +162,7 @@ export function useAmbientalMqtt() {
         // Compute pressure anomaly (Pa/s rate of change)
         let isPressureAnomaly = false;
         const rateOfChangeThreshold = 25.0; // Pa/s
-        
+
         if (!isPacketLostOrCorrupt && packet.data && packet.data.presion_pa) {
           const currentPres = packet.data.presion_pa.v;
           if (lastValidPresRef.current !== null && lastValidPresTimeRef.current !== null) {
@@ -227,7 +212,7 @@ export function useAmbientalMqtt() {
           const lastTime = lastValidRecvTimeRef.current[key];
           if (lastTime) {
             const ageSecs = parseFloat(((now - lastTime) / 1000).toFixed(1));
-            
+
             if (ageSecs !== prev[key].hace_seg) {
               changed = true;
               next[key] = {

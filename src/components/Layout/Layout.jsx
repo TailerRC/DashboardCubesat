@@ -16,6 +16,7 @@ export default function Layout() {
     '/mision': 'Misión',
     '/comunicacion': 'Comunicación',
     '/orientacion3d': 'Orientación 3D',
+    '/vision': 'Visión',
   };
 
   const viewName = pathMap[location.pathname] || 'Vista General';

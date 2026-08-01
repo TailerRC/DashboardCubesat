@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { MqttService } from '../config/mqttConfig';
-import { SATELITE_CONFIGS, getSateliteValueAtTime } from '../simulacion/sateliteMock';
 
 const TOPIC = 'cempai/cubesat/telemetry/satelite';
 const HISTORY_SIZE = 20;
@@ -16,30 +15,16 @@ const KEY_MAP = {
   tiempo_encendido_seg: 'tiempo_encendido_seg'
 };
 
-
-function buildInitialHistory(fieldKey) {
-  const points = [];
-  const mockKey = KEY_MAP[fieldKey];
-  const now = Date.now();
-  for (let i = 0; i < HISTORY_SIZE; i++) {
-    const agoSecs = (HISTORY_SIZE - 1 - i) * 1.5;
-    const value = getSateliteValueAtTime(mockKey, -agoSecs);
-    points.push({ value, timestamp: now - (agoSecs * 1000) });
-  }
-  return points;
-}
-
 export function useSateliteMqtt() {
   const [sateliteData, setSateliteData] = useState(() => {
     const initial = {};
     Object.keys(KEY_MAP).forEach(key => {
       const mockKey = KEY_MAP[key];
       const hasHistory = (mockKey === 'voltaje' || mockKey === 'corriente' || mockKey === 'consumo');
-      const hist = hasHistory ? buildInitialHistory(key) : null;
-      const latestVal = hasHistory ? hist[hist.length - 1].value : getSateliteValueAtTime(mockKey, 0);
+      const hist = hasHistory ? [] : null;
 
       initial[key] = {
-        v: latestVal,
+        v: 0,
         hace_seg: 0.0,
         stale: false,
         history: hist

@@ -1,39 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { MqttService } from '../config/mqttConfig';
-import { getMisionDataAtTime } from '../simulacion/misionMock';
 
 const TOPIC = 'cempai/cubesat/telemetry/mision';
 const HISTORY_SIZE = 20;
 
-function buildInitialData() {
-  const initialRaw = getMisionDataAtTime(450); // Sample descent phase for initial render
-  const now = Date.now();
-  
-  const altHist = [];
-  const velHist = [];
-  for (let i = 0; i < HISTORY_SIZE; i++) {
-    const agoSecs = (HISTORY_SIZE - 1 - i) * 2;
-    const sample = getMisionDataAtTime(450 - agoSecs);
-    altHist.push({ value: sample.altitud_m, timestamp: now - agoSecs * 1000 });
-    velHist.push({ value: sample.velocidad_vertical_ms, timestamp: now - agoSecs * 1000 });
-  }
-
-  return {
-    fase_cdr: initialRaw.fase_cdr,
-    fase_cdr_index: initialRaw.fase_cdr_index,
-    fase_ui: initialRaw.fase_ui,
-    altitud_m: { v: initialRaw.altitud_m, hace_seg: 0.0, history: altHist },
-    velocidad_vertical_ms: { v: initialRaw.velocidad_vertical_ms, hace_seg: 0.0, history: velHist },
-    t_vuelo_seg: { v: initialRaw.t_vuelo_seg, hace_seg: 0.0 },
-    // cabeceo_deg, balanceo_deg, giro_yaw_deg → leer de useOrientacion3DMqtt
-    sd_card_status: initialRaw.sd_card_status
-  };
-}
-
 export function useMisionMqtt() {
-  const [data, setData] = useState(buildInitialData);
+  const [data, setData] = useState(() => {
+    return {
+      fase_cdr: '---',
+      fase_cdr_index: null,
+      fase_ui: '---',
+      altitud_m: { v: 0, hace_seg: 0.0, history: [] },
+      velocidad_vertical_ms: { v: 0, hace_seg: 0.0, history: [] },
+      t_vuelo_seg: { v: 0, hace_seg: 0.0 },
+      // cabeceo_deg, balanceo_deg, giro_yaw_deg → leer de useOrientacion3DMqtt
+      sd_card_status: '---'
+    };
+  });
   const [lastPacketId, setLastPacketId] = useState(null);
-  const [lastValidPacketTime, setLastValidPacketTime] = useState(Date.now());
+  const [lastValidPacketTime, setLastValidPacketTime] = useState(null);
 
   useEffect(() => {
     const handleMessage = (packet) => {

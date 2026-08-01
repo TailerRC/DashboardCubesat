@@ -4,39 +4,25 @@ import { MqttService } from '../config/mqttConfig';
 const TOPIC = 'cempai/cubesat/telemetry/orientacion3d';
 const HISTORY_SIZE = 30;
 
-function buildInitialData() {
-  const now = Date.now();
-  const makeHist = (baseVal, spread) => {
-    const list = [];
-    for (let i = 0; i < HISTORY_SIZE; i++) {
-      list.push({
-        value: baseVal + Math.sin(i * 0.2) * spread,
-        timestamp: now - (HISTORY_SIZE - 1 - i) * 150
-      });
-    }
-    return list;
-  };
-
-  return {
-    cabeceo_deg: { v: 25.3, hace_seg: 0.0, history: makeHist(25.3, 5.0) },
-    balanceo_deg: { v: -10.8, hace_seg: 0.0, history: makeHist(-10.8, 4.0) },
-    giro_yaw_deg: { v: 175.1, hace_seg: 0.0, drift_acumulado: 2.1, history: makeHist(175.1, 8.0) },
-    accel_x: { v: 0.12, hace_seg: 0.0, history: makeHist(0.12, 0.2) },
-    accel_y: { v: 0.87, hace_seg: 0.0, history: makeHist(0.87, 0.25) },
-    accel_z: { v: 9.81, hace_seg: 0.0, history: makeHist(9.81, 0.3) },
-    gyro_x_dps: { v: 0.03, hace_seg: 0.0 },
-    gyro_y_dps: { v: -0.12, hace_seg: 0.0 },
-    gyro_z_dps: { v: 0.08, hace_seg: 0.0 },
-    inercial_x: { v: 0.1, hace_seg: 0.0 },
-    inercial_y: { v: 0.6, hace_seg: 0.0 },
-    inercial_z: { v: 0.01, hace_seg: 0.0 }
-  };
-}
-
 export function useOrientacion3DMqtt() {
-  const [data, setData] = useState(buildInitialData);
+  const [data, setData] = useState(() => {
+    return {
+      cabeceo_deg: { v: 0, hace_seg: 0.0, history: [] },
+      balanceo_deg: { v: 0, hace_seg: 0.0, history: [] },
+      giro_yaw_deg: { v: 0, hace_seg: 0.0, drift_acumulado: 0, history: [] },
+      accel_x: { v: 0, hace_seg: 0.0, history: [] },
+      accel_y: { v: 0, hace_seg: 0.0, history: [] },
+      accel_z: { v: 0, hace_seg: 0.0, history: [] },
+      gyro_x_dps: { v: 0, hace_seg: 0.0 },
+      gyro_y_dps: { v: 0, hace_seg: 0.0 },
+      gyro_z_dps: { v: 0, hace_seg: 0.0 },
+      inercial_x: { v: 0, hace_seg: 0.0 },
+      inercial_y: { v: 0, hace_seg: 0.0 },
+      inercial_z: { v: 0, hace_seg: 0.0 }
+    };
+  });
   const [lastPacketId, setLastPacketId] = useState(null);
-  const [lastValidPacketTime, setLastValidPacketTime] = useState(Date.now());
+  const [lastValidPacketTime, setLastValidPacketTime] = useState(null);
 
   useEffect(() => {
     const handleMessage = (packet) => {
