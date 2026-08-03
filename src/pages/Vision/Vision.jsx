@@ -20,6 +20,28 @@ export default function Vision() {
     vehiculos: 0
   });
 
+  // Estados añadidos para captura, galería, modal explicativo y gestión de confirmaciones/errores
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [captures, setCaptures] = useState([]);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const [selectedCaptureIndex, setSelectedCaptureIndex] = useState(null);
+  const [photoToDelete, setPhotoToDelete] = useState(null);
+  const [cameraError, setCameraError] = useState('');
+
+  // Cargar lista de capturas guardadas en la carpeta public/captures
+  async function fetchCaptures() {
+    try {
+      const response = await fetch('/api/list-captures');
+      const data = await response.json();
+      if (data.captures) {
+        setCaptures(data.captures);
+      }
+    } catch (err) {
+      console.error('[Vision] Error al cargar capturas:', err);
+    }
+  }
+
   // ── Obtener lista de cámaras ──────────────────────────────────────────────
   async function updateDevices() {
     try {
@@ -63,6 +85,7 @@ export default function Vision() {
       }
     }
     loadModel();
+    fetchCaptures();
 
     // Escuchar si se conectan o desconectan dispositivos
     navigator.mediaDevices.addEventListener('devicechange', updateDevices);
@@ -100,7 +123,7 @@ export default function Vision() {
       await updateDevices();
     } catch (err) {
       console.error('[Vision] Error al acceder a la cámara web:', err);
-      alert('No se pudo acceder a la cámara. Por favor verifica los permisos en el navegador.');
+      setCameraError('No se pudo acceder a la cámara. Por favor verifica los permisos del dispositivo y del navegador.');
       setIsStreamActive(false);
     }
   }
@@ -162,6 +185,121 @@ export default function Vision() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   }
+
+  // ── Captura fotográfica local ─────────────────────────────────────────────
+  async function capturePhoto() {
+    const video = videoRef.current;
+    if (!video || !isStreamActive || isCapturing) return;
+
+    setIsCapturing(true);
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 300);
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      
+      // Reflejar la imagen horizontalmente para que coincida exactamente con lo visto en pantalla
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const dataUrl = canvas.toDataURL('image/png');
+      
+      const response = await fetch('/api/save-capture', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        await fetchCaptures();
+      } else {
+        console.error('[Vision] Error al guardar la captura:', result.error);
+      }
+    } catch (err) {
+      console.error('[Vision] Error capturando foto:', err);
+    } finally {
+      setIsCapturing(false);
+    }
+  }
+
+  // ── Controles de visualización (Lightbox) ──────────────────────────────────
+  function openLightbox(index) {
+    setSelectedCaptureIndex(index);
+  }
+
+  function closeLightbox() {
+    setSelectedCaptureIndex(null);
+  }
+
+  function navigatePrev() {
+    if (selectedCaptureIndex === null || captures.length === 0) return;
+    setSelectedCaptureIndex(prev => (prev === 0 ? captures.length - 1 : prev - 1));
+  }
+
+  function navigateNext() {
+    if (selectedCaptureIndex === null || captures.length === 0) return;
+    setSelectedCaptureIndex(prev => (prev === captures.length - 1 ? 0 : prev + 1));
+  }
+
+  // ── Eliminar captura de foto local ────────────────────────────────────────
+  function deleteCapture(filename) {
+    setPhotoToDelete(filename);
+  }
+
+  async function executeDelete(filename) {
+    try {
+      const response = await fetch('/api/delete-capture', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filename }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Ajustar índice de lightbox si está abierto
+        if (selectedCaptureIndex !== null) {
+          if (captures.length <= 1) {
+            closeLightbox();
+          } else {
+            const currentIdx = selectedCaptureIndex;
+            if (currentIdx === captures.length - 1) {
+              setSelectedCaptureIndex(currentIdx - 1);
+            }
+          }
+        }
+        await fetchCaptures();
+      } else {
+        console.error('[Vision] Error al eliminar captura:', result.error);
+      }
+    } catch (err) {
+      console.error('[Vision] Error eliminando captura:', err);
+    }
+  }
+
+  // Navegación por teclado
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (selectedCaptureIndex === null) return;
+      if (e.key === 'ArrowLeft') {
+        navigatePrev();
+      } else if (e.key === 'ArrowRight') {
+        navigateNext();
+      } else if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCaptureIndex, captures]);
 
   // ── Cálculo heurístico de vegetación (conteo de píxeles verdes) ──────────
   function calcularVegetacion(ctx, width, height) {
@@ -280,6 +418,14 @@ export default function Vision() {
           )}
           {modelStatus === 'listo' && (
             <>
+              <button 
+                className="info-details-btn" 
+                onClick={() => setShowInfoModal(true)} 
+                title="Ver especificaciones técnicas"
+              >
+                <i className="fa-solid fa-circle-info"></i>
+              </button>
+
               {devices.length > 0 && (
                 <select
                   value={selectedDeviceId}
@@ -301,10 +447,20 @@ export default function Vision() {
                   Activar Cámara FPV
                 </button>
               ) : (
-                <button className="feed-control-btn feed-control-btn--stop" onClick={stopStream}>
-                  <i className="fa-solid fa-stop" style={{ marginRight: '8px' }}></i>
-                  Detener Cámara
-                </button>
+                <>
+                  <button 
+                    className="feed-control-btn feed-control-btn--capture" 
+                    onClick={capturePhoto}
+                    disabled={isCapturing}
+                  >
+                    <i className="fa-solid fa-camera" style={{ marginRight: '8px' }}></i>
+                    {isCapturing ? 'Capturando...' : 'Capturar Foto'}
+                  </button>
+                  <button className="feed-control-btn feed-control-btn--stop" onClick={stopStream}>
+                    <i className="fa-solid fa-stop" style={{ marginRight: '8px' }}></i>
+                    Detener Cámara
+                  </button>
+                </>
               )}
             </>
           )}
@@ -335,6 +491,8 @@ export default function Vision() {
               style={{ display: isStreamActive ? 'block' : 'none' }}
             />
             
+            {showFlash && <div className="camera-flash" />}
+
             {!isStreamActive && (
               <div className="feed-placeholder">
                 <i className="fa-solid fa-video-slash placeholder-icon"></i>
@@ -395,18 +553,222 @@ export default function Vision() {
             </div>
           </div>
 
-          {/* Advertencia / Nota Técnica */}
-          <div className="heuristic-disclaimer">
-            <div className="disclaimer-icon">
-              <i className="fa-solid fa-circle-info"></i>
+        </div>
+      </div>
+
+      {/* Sección de Capturas Guardadas */}
+      <section className="captures-section">
+        <div className="captures-header">
+          <h3>
+            <i className="fa-solid fa-images"></i> Galería de Capturas Cubesat
+          </h3>
+          <span className="captures-count">{captures.length} capturas guardadas</span>
+        </div>
+
+        {captures.length === 0 ? (
+          <div className="captures-empty">
+            <i className="fa-solid fa-camera-retro empty-icon"></i>
+            <p>No hay capturas fotográficas guardadas aún.</p>
+            <p className="empty-sub">Usa el botón "Capturar Foto" cuando la cámara esté activa para registrar imágenes.</p>
+          </div>
+        ) : (
+          <div className="captures-carousel-container">
+            <div className="captures-grid">
+              {captures.map((filename, index) => {
+                const timestampStr = filename.split('_')[1]?.split('.')[0];
+                const date = timestampStr ? new Date(parseInt(timestampStr)) : new Date();
+                const formattedDate = date.toLocaleString('es-ES', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                });
+
+                return (
+                  <div 
+                    key={filename} 
+                    className="capture-thumb-card" 
+                    onClick={() => openLightbox(index)}
+                  >
+                    <button 
+                      className="thumb-delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCapture(filename);
+                      }}
+                      title="Eliminar captura"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                    <div className="thumb-img-wrapper">
+                      <img src={`/captures/${filename}`} alt={formattedDate} loading="lazy" />
+                    </div>
+                    <div className="thumb-info">
+                      <span className="thumb-date">{formattedDate}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="disclaimer-text">
-              <div className="disclaimer-title">Nota Técnica del Subsistema de Visión</div>
-              La cobertura vegetal es calculada a través de un conteo heurístico de píxeles dominantes en el canal verde. Esto representa una aproximación cromática visual y no sustituye mediciones de índice calibrado (NDVI). Las precisiones de detección con COCO-SSD pueden variar según las condiciones lumínicas y la inclinación focal de la cámara.
+          </div>
+        )}
+      </section>
+
+      {/* Modal de Detalles Técnicos */}
+      {showInfoModal && (
+        <div className="vision-modal-overlay" onClick={() => setShowInfoModal(false)}>
+          <div className="vision-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="vision-modal-header">
+              <h3><i className="fa-solid fa-circle-info"></i> Especificaciones Técnicas</h3>
+              <button className="vision-modal-close" onClick={() => setShowInfoModal(false)}>&times;</button>
+            </div>
+            <div className="vision-modal-body">
+              <section className="technical-section">
+                <h4><i className="fa-solid fa-leaf"></i> Cobertura Vegetal Estimada</h4>
+                <p>
+                  El porcentaje de cobertura vegetal se calcula a través de un análisis cromático en tiempo real (conteo heurístico de píxeles dominantes en el canal verde):
+                </p>
+                <ul>
+                  <li><strong>Algoritmo:</strong> Se evalúa cada píxel del frame y se clasifica como vegetación si <code>G &gt; R</code> y <code>G &gt; B</code> con una intensidad mínima de <code>G &gt; 90</code>.</li>
+                  <li><strong>Limitación:</strong> Representa una aproximación cromática visual y no sustituye mediciones espectrales calibradas (como el índice NDVI).</li>
+                </ul>
+              </section>
+
+              <section className="technical-section">
+                <h4><i className="fa-solid fa-brain"></i> Detección de Objetos (COCO-SSD)</h4>
+                <p>
+                  Utilizamos la red neuronal convolucional <strong>COCO-SSD</strong> sobre <strong>TensorFlow.js</strong> cargada en el cliente web local para identificar elementos en tiempo real:
+                </p>
+                <ul>
+                  <li><strong>Clases analizadas:</strong> Personas (<code>person</code>) y Vehículos (<code>car</code>, <code>truck</code>, <code>bus</code>, <code>motorbike</code>).</li>
+                  <li><strong>Rendimiento:</strong> El bucle de inferencia se ejecuta optimizado cada 300 ms para mantener alta tasa de frames sin sobrecargar la CPU/GPU del cliente.</li>
+                  <li><strong>Precisión:</strong> Sujeta a las condiciones lumínicas, sombras y el ángulo de inclinación focal de la cámara FPV.</li>
+                </ul>
+              </section>
+            </div>
+            <div className="vision-modal-footer">
+              <button className="vision-modal-btn-close" onClick={() => setShowInfoModal(false)}>Entendido</button>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Lightbox Modal (Visualizador de pantalla completa) */}
+      {selectedCaptureIndex !== null && (
+        <div className="lightbox-overlay" onClick={closeLightbox}>
+          <div className="lightbox-container" onClick={(e) => e.stopPropagation()}>
+            <button className="lightbox-close" onClick={closeLightbox} title="Cerrar (Esc)">&times;</button>
+            
+            <button 
+              className="lightbox-nav lightbox-nav--prev" 
+              onClick={navigatePrev}
+              title="Anterior (Flecha Izquierda)"
+            >
+              <i className="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <div className="lightbox-content">
+              <img 
+                src={`/captures/${captures[selectedCaptureIndex]}`} 
+                alt="Captura grande" 
+                className="lightbox-img"
+              />
+              <div className="lightbox-meta">
+                <span className="lightbox-index">Foto {selectedCaptureIndex + 1} de {captures.length}</span>
+                
+                <button 
+                  className="lightbox-delete-btn"
+                  onClick={() => deleteCapture(captures[selectedCaptureIndex])}
+                  title="Eliminar esta foto"
+                >
+                  <i className="fa-solid fa-trash" style={{ marginRight: '6px' }}></i>
+                  Eliminar Foto
+                </button>
+
+                <span className="lightbox-date">
+                  {(() => {
+                    const filename = captures[selectedCaptureIndex];
+                    const timestampStr = filename.split('_')[1]?.split('.')[0];
+                    const date = timestampStr ? new Date(parseInt(timestampStr)) : new Date();
+                    return date.toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    });
+                  })()}
+                </span>
+              </div>
+            </div>
+
+            <button 
+              className="lightbox-nav lightbox-nav--next" 
+              onClick={navigateNext}
+              title="Siguiente (Flecha Derecha)"
+            >
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {photoToDelete !== null && (
+        <div className="vision-modal-overlay" onClick={() => setPhotoToDelete(null)}>
+          <div className="vision-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="vision-modal-header" style={{ borderBottomColor: '#d32f2f' }}>
+              <h3><i className="fa-solid fa-triangle-exclamation" style={{ color: '#f44336' }}></i> Confirmar Eliminación</h3>
+              <button className="vision-modal-close" onClick={() => setPhotoToDelete(null)}>&times;</button>
+            </div>
+            <div className="vision-modal-body">
+              <p style={{ fontSize: '13px', color: '#cbd5e1', margin: 0 }}>
+                ¿Estás seguro de que deseas eliminar permanentemente esta captura fotográfica?
+              </p>
+              <p style={{ fontSize: '11px', color: '#8892b0', marginTop: '6px', marginBottom: 0 }}>
+                Esta acción no se puede deshacer y el archivo será borrado del repositorio.
+              </p>
+            </div>
+            <div className="vision-modal-footer">
+              <button className="vision-modal-btn-close" style={{ marginRight: '8px' }} onClick={() => setPhotoToDelete(null)}>Cancelar</button>
+              <button 
+                className="vision-modal-btn-close" 
+                style={{ background: '#d32f2f', borderColor: '#d32f2f', color: '#fff' }}
+                onClick={async () => {
+                  const filename = photoToDelete;
+                  setPhotoToDelete(null);
+                  await executeDelete(filename);
+                }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Error de Cámara */}
+      {cameraError && (
+        <div className="vision-modal-overlay" onClick={() => setCameraError('')}>
+          <div className="vision-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="vision-modal-header" style={{ borderBottomColor: '#f44336' }}>
+              <h3><i className="fa-solid fa-circle-xmark" style={{ color: '#f44336' }}></i> Error de Dispositivo</h3>
+              <button className="vision-modal-close" onClick={() => setCameraError('')}>&times;</button>
+            </div>
+            <div className="vision-modal-body">
+              <p style={{ fontSize: '13px', color: '#cbd5e1', margin: 0 }}>
+                {cameraError}
+              </p>
+            </div>
+            <div className="vision-modal-footer">
+              <button className="vision-modal-btn-close" onClick={() => setCameraError('')}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,4 @@
-import React, { useEffect, useRef } from 'react';
-import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapaOrbital.css';
@@ -31,19 +30,38 @@ const iconoClick = L.divIcon({
 });
 
 const MapaOrbital = () => {
-  const { data } = useUbicacionMqtt();
   const mountRef = useRef(null);
   const mapRef = useRef(null);
   const miMarkerRef = useRef(null);
   const clickMarkerRef = useRef(null);
 
-  const lat = data.latitud?.v;
-  const lon = data.longitud?.v;
-  const alt = data.altitud_gps?.v ?? 0;
-  const sats = data.satelites?.v ?? 0;
+  const [userLoc, setUserLoc] = useState({ lat: null, lon: null });
 
   useEffect(() => {
-    if (mapRef.current || lat === undefined || lon === undefined) return;
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLoc({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error obteniendo geolocalización:", error);
+          setUserLoc({ lat: -12.0464, lon: -77.0428 }); // Lima por defecto
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      setUserLoc({ lat: -12.0464, lon: -77.0428 });
+    }
+  }, []);
+
+  const lat = userLoc.lat;
+  const lon = userLoc.lon;
+
+  useEffect(() => {
+    if (mapRef.current || lat === null || lon === null) return;
 
     // ── Crear mapa ──────────────────────────────────────────────────────
     const map = L.map(mountRef.current, {
@@ -101,22 +119,21 @@ const MapaOrbital = () => {
       mapRef.current = null;
       miMarkerRef.current = null;
     };
-  }, []);
+  }, [lat, lon]);
 
-  // Actualizar la posición del pin con los datos reales del sensor GPS
+  // Actualizar la posición del pin con tu ubicación real
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || lat === undefined || lon === undefined) return;
+    if (!map || lat === null || lon === null) return;
 
     const html = `
       <div class="mapa-popup">
         <div class="mapa-popup__title" style="color:#00ff66">
-          <i class="fa-solid fa-satellite" style="margin-right:6px"></i>Sensor GPS (CubeSat)
+          <i class="fa-solid fa-location-arrow" style="margin-right:6px"></i>Mi Ubicación Actual
         </div>
         <div class="mapa-popup__coords">
           <span>Lat: <strong>${lat.toFixed(5)}°</strong></span>
           <span>Lon: <strong>${lon.toFixed(5)}°</strong></span>
-          <span class="mapa-popup__accuracy"><i class="fa-solid fa-signal" style="margin-right:4px;font-size:9px"></i>Satélites: ${sats} | Alt: ${alt.toFixed(1)}m</span>
         </div>
       </div>`;
 
@@ -141,7 +158,7 @@ const MapaOrbital = () => {
     }
 
     map.panTo([lat, lon]);
-  }, [lat, lon, alt, sats]);
+  }, [lat, lon]);
 
   return (
     <div className="mapa-orbital-container">
