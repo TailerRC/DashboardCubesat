@@ -11,7 +11,9 @@ const REAL_MQTT_BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt';
 class MqttBroker {
   constructor() {
     this.subscribers = {};
+    this.statusSubscribers = [];
     this.client = null;
+    this.isConnected = false;
 
     if (USE_REAL_MQTT) {
       this.initRealMqtt();
@@ -19,26 +21,56 @@ class MqttBroker {
   }
 
   /**
+   * Subscribes a listener to WebSocket connection status changes.
+   */
+  subscribeStatus(callback) {
+    this.statusSubscribers.push(callback);
+    callback(this.isConnected);
+    return () => {
+      this.statusSubscribers = this.statusSubscribers.filter(cb => cb !== callback);
+    };
+  }
+
+  notifyStatus(connected) {
+    this.isConnected = connected;
+    this.statusSubscribers.forEach(cb => {
+      try {
+        cb(connected);
+      } catch (e) {
+        console.error('[MQTT] Error in status callback', e);
+      }
+    });
+  }
+
+  /**
    * Initializes connection to real MQTT broker over WebSockets.
-   * Can be fully enabled once 'mqtt' package is installed.
    */
   async initRealMqtt() {
     try {
       this.client = mqtt.connect(REAL_MQTT_BROKER_URL, {
         clientId: 'cempai_dashboard_' + Math.random().toString(16).substring(2, 8),
-        username: 'Dashboard',
-        password: 'cempai123',
         clean: true,
-        connectTimeout: 4000,
-        reconnectPeriod: 1000,
+        connectTimeout: 10000,
+        reconnectPeriod: 2000,
+        keepalive: 60
       });
 
       this.client.on('connect', () => {
         console.log('[MQTT] Connected to HiveMQ Broker!');
+        this.notifyStatus(true);
         // Re-subscribe to all existing local topics
         Object.keys(this.subscribers).forEach(topic => {
           this.client.subscribe(topic);
         });
+      });
+
+      this.client.on('offline', () => {
+        console.warn('[MQTT] Broker offline.');
+        this.notifyStatus(false);
+      });
+
+      this.client.on('close', () => {
+        this.notifyStatus(false);
       });
 
       this.client.on('message', (topic, message) => {
@@ -53,9 +85,11 @@ class MqttBroker {
 
       this.client.on('error', (err) => {
         console.error('[MQTT] Connection error:', err);
+        this.notifyStatus(false);
       });
     } catch (e) {
       console.warn('[MQTT] Real client initialization failed, falling back to mock.', e);
+      this.notifyStatus(false);
     }
   }
 

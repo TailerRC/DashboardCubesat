@@ -42,28 +42,36 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
   const utcOffset = -time.getTimezoneOffset() / 60;
   const utcLabel = `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
 
+  const fmt = (val, decimals = 1, fallback = '---') => {
+    return (val !== null && val !== undefined && typeof val === 'number' && !isNaN(val))
+      ? val.toFixed(decimals)
+      : fallback;
+  };
+
   // Safe checks and scaling for active telemetry parameters
-  const co2 = ambSensors?.co2_ppm?.v !== undefined ? ambSensors.co2_ppm.v.toFixed(1) : '---';
-  const tempAmb = ambSensors?.temperatura_c?.v !== undefined ? ambSensors.temperatura_c.v.toFixed(1) : '---';
-  const hum = ambSensors?.humedad_pct?.v !== undefined ? ambSensors.humedad_pct.v.toFixed(1) : '---';
-  const pres = ambSensors?.presion_pa?.v !== undefined ? ambSensors.presion_pa.v.toFixed(0) : '---';
-  const uv = ambSensors?.radiacion_uv?.v !== undefined ? ambSensors.radiacion_uv.v.toFixed(1) : '---';
+  const co2 = fmt(ambSensors?.co2_ppm?.v, 1);
+  const tempAmb = fmt(ambSensors?.temperatura_c?.v, 1);
+  const hum = fmt(ambSensors?.humedad_pct?.v, 1);
+  const pres = fmt(ambSensors?.presion_pa?.v, 0);
+  const uv = fmt(ambSensors?.radiacion_uv?.v, 1);
 
-  const lat = ubiData?.latitud?.v !== undefined ? ubiData.latitud.v.toFixed(4) : '---';
-  const lon = ubiData?.longitud?.v !== undefined ? ubiData.longitud.v.toFixed(4) : '---';
-  const alt = ubiData?.altitud_gps?.v !== undefined ? ubiData.altitud_gps.v.toFixed(1) : '---';
-  const vel = ubiData?.velocidad_kmh?.v !== undefined ? ubiData.velocidad_kmh.v.toFixed(1) : '---';
-  const dist = ubiData?.distancia_origen?.v !== undefined ? ubiData.distancia_origen.v.toFixed(1) : '---';
-  const sats = ubiData?.satelites?.v !== undefined ? ubiData.satelites.v : '---';
+  const lat = fmt(ubiData?.latitud?.v, 4);
+  const lon = fmt(ubiData?.longitud?.v, 4);
+  const alt = fmt(ubiData?.altitud_gps?.v, 1);
+  const vel = fmt(ubiData?.velocidad_kmh?.v, 1);
+  const dist = fmt(ubiData?.distancia_origen?.v, 1);
+  const sats = ubiData?.satelites?.v !== undefined && ubiData?.satelites?.v !== null ? ubiData.satelites.v : '---';
 
-  const volt = satData?.voltaje_v?.v !== undefined ? satData.voltaje_v.v.toFixed(2) : '---';
-  const curr = satData?.corriente_ma?.v !== undefined ? satData.corriente_ma.v.toFixed(1) : '---';
-  const cons = satData?.consumo_w?.v !== undefined ? satData.consumo_w.v.toFixed(2) : '---';
-  const tempMcu = satData?.temp_mcu?.v !== undefined ? satData.temp_mcu.v.toFixed(1) : '---';
-  const accX = orientData?.accel_x?.v !== undefined ? orientData.accel_x.v.toFixed(1) : '---';
-  const accY = orientData?.accel_y?.v !== undefined ? orientData.accel_y.v.toFixed(1) : '---';
-  const accZ = orientData?.accel_z?.v !== undefined ? orientData.accel_z.v.toFixed(1) : '---';
-  const uptime = satData?.tiempo_encendido_seg?.v !== undefined ? formatUptime(satData.tiempo_encendido_seg.v) : '---';
+  const volt = fmt(satData?.voltaje_v?.v, 2);
+  const curr = fmt(satData?.corriente_ma?.v, 1);
+  const cons = fmt(satData?.consumo_w?.v, 2);
+  const tempMcu = fmt(satData?.temp_mcu?.v, 1);
+  const accX = fmt(orientData?.accel_x?.v, 1);
+  const accY = fmt(orientData?.accel_y?.v, 1);
+  const accZ = fmt(orientData?.accel_z?.v, 1);
+  const uptime = (satData?.tiempo_encendido_seg?.v !== undefined && satData?.tiempo_encendido_seg?.v !== null)
+    ? formatUptime(satData.tiempo_encendido_seg.v)
+    : '---';
 
   // Raw telemetry data compile (removing unmapped packages and phase)
   const telemetryItems = [

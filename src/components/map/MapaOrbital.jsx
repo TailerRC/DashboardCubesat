@@ -35,25 +35,29 @@ const MapaOrbital = () => {
   const miMarkerRef = useRef(null);
   const clickMarkerRef = useRef(null);
 
-  const [userLoc, setUserLoc] = useState({ lat: null, lon: null });
+  const DEFAULT_LAT = -12.0850;
+  const DEFAULT_LON = -77.0900;
+
+  const [userLoc, setUserLoc] = useState({ lat: DEFAULT_LAT, lon: DEFAULT_LON });
+  const [isRealGps, setIsRealGps] = useState(false);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
+      const watchId = navigator.geolocation.watchPosition(
         (position) => {
           setUserLoc({
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           });
+          setIsRealGps(true);
         },
         (error) => {
-          console.error("Error obteniendo geolocalización:", error);
-          setUserLoc({ lat: -12.0464, lon: -77.0428 }); // Lima por defecto
+          console.warn("Geolocalización del navegador no disponible, usando Estación Terrena:", error);
+          setIsRealGps(false);
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
       );
-    } else {
-      setUserLoc({ lat: -12.0464, lon: -77.0428 });
+      return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
 
@@ -71,12 +75,15 @@ const MapaOrbital = () => {
       attributionControl: true,
     });
 
-    // Usar tiles de CartoDB
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
     map.attributionControl.setPrefix(false);
+
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 200);
 
     mapRef.current = map;
 
@@ -161,8 +168,8 @@ const MapaOrbital = () => {
   }, [lat, lon]);
 
   return (
-    <div className="mapa-orbital-container">
-      <div ref={mountRef} className="mapa-orbital-map" />
+    <div className="mapa-orbital-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={mountRef} className="mapa-orbital-map" style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };

@@ -123,12 +123,23 @@ export function useAmbientalMqtt() {
 
           if (!isPacketLostOrCorrupt) {
             const sensorVal = packet.data[key];
-            if (sensorVal) {
-              val = parseFloat(sensorVal.v.toFixed(2));
-              hace_seg = sensorVal.hace_seg;
-              umbral_alerta = (sensorVal.umbral_alerta !== undefined && sensorVal.umbral_alerta !== null)
-                ? sensorVal.umbral_alerta
-                : SENSOR_CONFIGS[KEY_MAP[key]].threshold;
+            if (sensorVal !== undefined && sensorVal !== null) {
+              const rawV = (typeof sensorVal === 'object' && sensorVal !== null) ? sensorVal.v : sensorVal;
+              if (rawV !== null && rawV !== undefined && !isNaN(Number(rawV))) {
+                val = parseFloat(Number(rawV).toFixed(2));
+              } else if (prevSensor.v !== null && prevSensor.v !== undefined) {
+                val = prevSensor.v;
+              } else {
+                val = 0;
+              }
+
+              const rawHaceSeg = (typeof sensorVal === 'object' && sensorVal !== null) ? sensorVal.hace_seg : undefined;
+              hace_seg = (rawHaceSeg !== undefined && rawHaceSeg !== null) ? rawHaceSeg : (prevSensor.hace_seg || 0);
+
+              const rawUmbral = (typeof sensorVal === 'object' && sensorVal !== null) ? sensorVal.umbral_alerta : undefined;
+              umbral_alerta = (rawUmbral !== undefined && rawUmbral !== null)
+                ? rawUmbral
+                : (SENSOR_CONFIGS[KEY_MAP[key]]?.threshold ?? prevSensor.umbral_alerta);
               stale = false;
 
               // Store timestamp when this valid value arrived
@@ -164,23 +175,27 @@ export function useAmbientalMqtt() {
         const rateOfChangeThreshold = 25.0; // Pa/s
 
         if (!isPacketLostOrCorrupt && packet.data && packet.data.presion_pa) {
-          const currentPres = packet.data.presion_pa.v;
-          if (lastValidPresRef.current !== null && lastValidPresTimeRef.current !== null) {
-            const deltaSeconds = (packetTime - lastValidPresTimeRef.current) / 1000.0;
-            if (deltaSeconds > 0.05) {
-              const rateOfChange = Math.abs(currentPres - lastValidPresRef.current) / deltaSeconds;
-              if (rateOfChange > rateOfChangeThreshold) {
-                isPressureAnomaly = true;
-                lastAnomalyTimeRef.current = packetTime;
-                console.warn(
-                  `[ALERTA ANOMALÍA] Caída rápida de presión detectada: ${rateOfChange.toFixed(2)} Pa/s (Umbral: ${rateOfChangeThreshold} Pa/s).`
-                );
+          const presObj = packet.data.presion_pa;
+          const rawPres = (typeof presObj === 'object' && presObj !== null) ? presObj.v : presObj;
+          if (rawPres !== null && rawPres !== undefined && !isNaN(Number(rawPres))) {
+            const currentPres = Number(rawPres);
+            if (lastValidPresRef.current !== null && lastValidPresTimeRef.current !== null) {
+              const deltaSeconds = (packetTime - lastValidPresTimeRef.current) / 1000.0;
+              if (deltaSeconds > 0.05) {
+                const rateOfChange = Math.abs(currentPres - lastValidPresRef.current) / deltaSeconds;
+                if (rateOfChange > rateOfChangeThreshold) {
+                  isPressureAnomaly = true;
+                  lastAnomalyTimeRef.current = packetTime;
+                  console.warn(
+                    `[ALERTA ANOMALÍA] Caída rápida de presión detectada: ${rateOfChange.toFixed(2)} Pa/s (Umbral: ${rateOfChangeThreshold} Pa/s).`
+                  );
+                }
               }
             }
+            lastValidPresRef.current = currentPres;
+            lastValidPresTimeRef.current = packetTime;
+            setLastValidPacketTime(packetTime);
           }
-          lastValidPresRef.current = currentPres;
-          lastValidPresTimeRef.current = packetTime;
-          setLastValidPacketTime(packetTime);
         }
 
         return nextSensors;

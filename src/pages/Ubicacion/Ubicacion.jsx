@@ -36,20 +36,22 @@ export default function Ubicacion() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const initialLat = data.latitud.v;
-    const initialLon = data.longitud.v;
+    const rawLat = data?.latitud?.v;
+    const rawLon = data?.longitud?.v;
+    const initialLat = (rawLat !== null && rawLat !== undefined && rawLat !== 0) ? rawLat : LAUNCH_LAT;
+    const initialLon = (rawLon !== null && rawLon !== undefined && rawLon !== 0) ? rawLon : LAUNCH_LON;
 
     // Center on telemetry location
     const map = L.map(mapRef.current, {
       center: [initialLat, initialLon],
       zoom: 15,
       zoomControl: true,
-      attributionControl: false
+      attributionControl: true
     });
 
-    // Dark thematic map style from CartoDB (perfect for dark dashboard)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20,
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
     // Current location marker
@@ -63,6 +65,10 @@ export default function Ubicacion() {
       weight: 3,
       opacity: 0.85
     }).addTo(map);
+
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 200);
 
     mapInstanceRef.current = map;
     markerRef.current = marker;
@@ -78,8 +84,11 @@ export default function Ubicacion() {
 
   // Update marker and trail position
   useEffect(() => {
-    const lat = data.latitud.v;
-    const lon = data.longitud.v;
+    const rawLat = data?.latitud?.v;
+    const rawLon = data?.longitud?.v;
+    const lat = (rawLat !== null && rawLat !== undefined && rawLat !== 0) ? rawLat : LAUNCH_LAT;
+    const lon = (rawLon !== null && rawLon !== undefined && rawLon !== 0) ? rawLon : LAUNCH_LON;
+
     const map = mapInstanceRef.current;
     const marker = markerRef.current;
     const polyline = polylineRef.current;
@@ -90,24 +99,33 @@ export default function Ubicacion() {
     marker.setLatLng([lat, lon]);
     map.panTo([lat, lon]);
 
+    const altVal = (data?.altitud_gps?.v !== null && data?.altitud_gps?.v !== undefined) ? data.altitud_gps.v : 0;
+    const velVal = (data?.velocidad_kmh?.v !== null && data?.velocidad_kmh?.v !== undefined) ? data.velocidad_kmh.v : 0;
+    const satsVal = (data?.satelites?.v !== null && data?.satelites?.v !== undefined) ? data.satelites.v : 0;
+    const hdopVal = (data?.hdop?.v !== null && data?.hdop?.v !== undefined) ? data.hdop.v : 0;
+
     marker.getPopup().setContent(`
       <div class="map-popup-content">
         <b style="color: #4fc3f7; font-size: 13px; font-weight: bold;">CUBESAT CEMPAI (NEO-7M)</b><br/>
         <b>Lat:</b> ${lat.toFixed(6)}°<br/>
         <b>Lon:</b> ${lon.toFixed(6)}°<br/>
-        <b>Altitud:</b> ${data.altitud_gps.v.toFixed(1)} m<br/>
-        <b>Velocidad:</b> ${data.velocidad_kmh.v.toFixed(1)} km/h<br/>
-        <b>Satélites:</b> ${data.satelites.v} visibles<br/>
-        <b>HDOP:</b> ${data.hdop.v.toFixed(1)}
+        <b>Altitud:</b> ${altVal.toFixed(1)} m<br/>
+        <b>Velocidad:</b> ${velVal.toFixed(1)} km/h<br/>
+        <b>Satélites:</b> ${satsVal} visibles<br/>
+        <b>HDOP:</b> ${hdopVal.toFixed(1)}
       </div>
     `);
 
     // Historial de trayectoria
-    const latHist = data.latitud.history || [];
-    const lonHist = data.longitud.history || [];
-    const points = latHist.map((pt, idx) => [pt.value, lonHist[idx]?.value || pt.value]);
+    const latHist = data?.latitud?.history || [];
+    const lonHist = data?.longitud?.history || [];
+    const points = latHist
+      .filter(pt => pt.value !== 0)
+      .map((pt, idx) => [pt.value, lonHist[idx]?.value || pt.value]);
 
-    polyline.setLatLngs(points);
+    if (points.length > 0) {
+      polyline.setLatLngs(points);
+    }
   }, [data]);
 
   // 2. Dynamic Y-Axis scale for Altitud GPS
@@ -148,7 +166,7 @@ export default function Ubicacion() {
           <div className="map-footer">
             <span className="map-title-label">
               <i className="fa-solid fa-earth-americas" style={{ marginRight: '6px', color: '#4fc3f7' }}></i>
-              GEOPOSICIONAMIENTO EN TIEMPO REAL (LIMA - SAN MIGUEL)
+              {data.latitud.v !== 0 ? 'GEOPOSICIONAMIENTO EN TIEMPO REAL (ESP32 - NEO-7M)' : 'GEOPOSICIONAMIENTO ESP32 (ESPERANDO SEÑAL REAL NEO-7M...)'}
             </span>
             <div className="map-footer-right">
               <div className="landing-coords-inline">
@@ -159,7 +177,7 @@ export default function Ubicacion() {
                 </span>
               </div>
               <span className="map-subtitle-label">
-                Actualización cada {isStale ? '>2s' : '0.7s'} · {data.satelites.v} satélites visibles
+                Actualización {isStale ? '(Sin datos del ESP32)' : 'cada 0.7s'} · {data.satelites.v} satélites visibles
               </span>
             </div>
           </div>
@@ -173,16 +191,16 @@ export default function Ubicacion() {
         <div className="panel-card gps-data-panel premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
           <h4 className="ubi-panel-header">
             <i className="fa-solid fa-satellite" style={{ marginRight: '6px', color: '#4fc3f7' }}></i>
-            DATOS GPS
+            DATOS GPS REALES (ESP32)
           </h4>
           <table className="gps-table">
             <tbody>
-              <tr><td>Latitud:</td><td className="gps-val">{data.latitud.v.toFixed(6)}</td></tr>
-              <tr><td>Longitud:</td><td className="gps-val">{data.longitud.v.toFixed(6)}</td></tr>
+              <tr><td>Latitud:</td><td className="gps-val">{data.latitud.v !== 0 ? `${data.latitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
+              <tr><td>Longitud:</td><td className="gps-val">{data.longitud.v !== 0 ? `${data.longitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
               <tr><td>Altitud GPS:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
               <tr><td>Velocidad:</td><td className="gps-val">{data.velocidad_kmh.v.toFixed(1)} km/h</td></tr>
               <tr><td>Satélites:</td><td className="gps-val gps-ok">{data.satelites.v} visibles</td></tr>
-              <tr><td>HDOP:</td><td className="gps-val gps-ok">{data.hdop.v.toFixed(1)} (Excelente)</td></tr>
+              <tr><td>HDOP:</td><td className="gps-val gps-ok">{data.hdop.v.toFixed(1)}</td></tr>
               <tr><td>Fecha UTC:</td><td className="gps-val">{data.fecha_utc}</td></tr>
               <tr><td>Hora UTC:</td><td className="gps-val mono">{data.hora_utc}</td></tr>
             </tbody>
