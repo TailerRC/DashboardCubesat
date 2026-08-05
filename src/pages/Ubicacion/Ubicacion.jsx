@@ -197,7 +197,7 @@ export default function Ubicacion() {
             <tbody>
               <tr><td>Latitud:</td><td className="gps-val">{data.latitud.v !== 0 ? `${data.latitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
               <tr><td>Longitud:</td><td className="gps-val">{data.longitud.v !== 0 ? `${data.longitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
-              <tr><td>Altitud GPS:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
+              <tr><td>Altitud de Vuelo:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
               <tr><td>Velocidad:</td><td className="gps-val">{data.velocidad_kmh.v.toFixed(1)} km/h</td></tr>
               <tr><td>Satélites:</td><td className="gps-val gps-ok">{data.satelites.v} visibles</td></tr>
               <tr><td>HDOP:</td><td className="gps-val gps-ok">{data.hdop.v.toFixed(1)}</td></tr>
@@ -242,12 +242,12 @@ export default function Ubicacion() {
 
       </section>
 
-      {/* ── FILA 3: Altitud GPS | Distancia al Origen ── */}
+      {/* ── FILA 3: Altitud de Vuelo | Distancia al Origen ── */}
       <section className="ubi-row ubi-row--two">
 
-        {/* Altitud GPS */}
+        {/* Altitud de Vuelo */}
         <div className="panel-card altitud-card premium-card-hover" style={{ '--card-color': '#ff9800' }}>
-          <h4 className="ubi-panel-header">ALTITUD GPS</h4>
+          <h4 className="ubi-panel-header">ALTITUD DE VUELO</h4>
           <div className="panel-main-value">
             <span className="big-value">{data.altitud_gps.v.toFixed(0)}</span>
             <span className="big-unit">m</span>

@@ -55,7 +55,7 @@ export default function VistaGeneral() {
       icon: <i className="fa-solid fa-mountain"></i>,
       value: altVal,
       unit: 'm',
-      label: 'ALTITUD',
+      label: 'ALTITUD DE VUELO',
       color: '#ef5350',
     },
     {

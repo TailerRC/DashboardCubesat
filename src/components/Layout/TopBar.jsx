@@ -78,7 +78,7 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
     { label: 'Voltaje:', value: `${volt} V`, color: '#ef5350' },
     { label: 'Corriente:', value: `${curr} mA`, color: '#42a5f5' },
     { label: 'Consumo:', value: `${cons} W`, color: '#ba68c8' },
-    { label: 'Altitud:', value: `${alt} m`, color: '#ef5350' },
+    { label: 'Altitud Vuelo:', value: `${alt} m`, color: '#ef5350' },
     { label: 'Latitud:', value: `${lat}°`, color: '#4fc3f7' },
     { label: 'Longitud:', value: `${lon}°`, color: '#4fc3f7' },
     { label: 'CO2:', value: `${co2} ppm`, color: '#f9a825' },
