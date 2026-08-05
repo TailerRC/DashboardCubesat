@@ -10,7 +10,7 @@ import { startMisionMockPublisher } from './mqtt/simulacion/misionMock'
 import { startComunicacionMockPublisher } from './mqtt/simulacion/comunicacionMock'
 import { startOrientacion3DMockPublisher } from './mqtt/simulacion/orientacion3dMock'
 
-// Start mock CubeSat MQTT telemetry stream (Comentado para usar broker MQTT real)
+// Mock publishers desactivados para usar ÚNICAMENTE telemetría real del ESP32
 // startAmbientalMockPublisher();
 // startUbicacionMockPublisher();
 // startSateliteMockPublisher();

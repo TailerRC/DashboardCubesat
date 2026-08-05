@@ -60,9 +60,11 @@ export function useSateliteMqtt() {
 
           if (!isPacketLostOrCorrupt) {
             const payloadVal = packet.data[key];
-            if (payloadVal) {
-              val = payloadVal.v;
-              hace_seg = payloadVal.hace_seg;
+            if (payloadVal !== undefined && payloadVal !== null) {
+              const rawV = (typeof payloadVal === 'object' && payloadVal !== null) ? payloadVal.v : payloadVal;
+              val = (rawV !== null && rawV !== undefined) ? rawV : (prevItem.v ?? 0);
+              const rawHaceSeg = (typeof payloadVal === 'object' && payloadVal !== null) ? payloadVal.hace_seg : undefined;
+              hace_seg = (rawHaceSeg !== undefined && rawHaceSeg !== null) ? rawHaceSeg : (prevItem.hace_seg || 0);
               stale = false;
               lastValidRecvTimeRef.current[key] = packetTime - (hace_seg * 1000);
             }

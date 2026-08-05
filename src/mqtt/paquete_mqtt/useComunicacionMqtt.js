@@ -35,9 +35,13 @@ export function useComunicacionMqtt() {
         const d = packet.data;
 
         setData(prev => {
+          const getV = (obj, fallback = 0) => (obj && typeof obj === 'object' && obj.v !== undefined && obj.v !== null) ? obj.v : (typeof obj === 'number' ? obj : fallback);
+          const getSeg = (obj, fallback = 0) => (obj && typeof obj === 'object' && obj.hace_seg !== undefined && obj.hace_seg !== null) ? obj.hace_seg : fallback;
+
           // Update link quality history
+          const calidadVal = getV(d.calidad_enlace_pct, prev.calidad_enlace_pct.v);
           const prevCalHist = prev.calidad_enlace_pct.history || [];
-          const newCalHist = [...prevCalHist, { value: d.calidad_enlace_pct.v, timestamp: packetTime }];
+          const newCalHist = [...prevCalHist, { value: calidadVal, timestamp: packetTime }];
           if (newCalHist.length > HISTORY_SIZE) newCalHist.shift();
 
           // Append to log entries if a new log entry arrived
@@ -54,16 +58,16 @@ export function useComunicacionMqtt() {
           while (pktsWindow.length < 30) pktsWindow.unshift('ok');
 
           return {
-            paquetes_enviados: { v: d.paquetes_enviados.v, hace_seg: d.paquetes_enviados.hace_seg },
-            paquetes_recibidos: { v: d.paquetes_recibidos.v, hace_seg: d.paquetes_recibidos.hace_seg },
-            paquetes_perdidos: { v: d.paquetes_perdidos.v, hace_seg: d.paquetes_perdidos.hace_seg },
-            frecuencia_ghz: { v: d.frecuencia_ghz.v, hace_seg: d.frecuencia_ghz.hace_seg },
-            canal_nrf24: { v: d.canal_nrf24 ? d.canal_nrf24.v : 1 },
-            calidad_enlace_pct: { v: d.calidad_enlace_pct.v, hace_seg: d.calidad_enlace_pct.hace_seg, history: newCalHist },
-            calidad_label: d.calidad_label,
-            baudios_debug: { v: d.baudios_debug ? d.baudios_debug.v : 9600 },
-            tasa_aire_nrf24_kbps: { v: d.tasa_aire_nrf24_kbps ? d.tasa_aire_nrf24_kbps.v : 2000 },
-            ultimo_pkt_timestamp: d.ultimo_pkt_timestamp || '00:00:00',
+            paquetes_enviados: { v: getV(d.paquetes_enviados, prev.paquetes_enviados.v), hace_seg: getSeg(d.paquetes_enviados) },
+            paquetes_recibidos: { v: getV(d.paquetes_recibidos, prev.paquetes_recibidos.v), hace_seg: getSeg(d.paquetes_recibidos) },
+            paquetes_perdidos: { v: getV(d.paquetes_perdidos, prev.paquetes_perdidos.v), hace_seg: getSeg(d.paquetes_perdidos) },
+            frecuencia_ghz: { v: getV(d.frecuencia_ghz, prev.frecuencia_ghz.v), hace_seg: getSeg(d.frecuencia_ghz) },
+            canal_nrf24: { v: getV(d.canal_nrf24, 1) },
+            calidad_enlace_pct: { v: calidadVal, hace_seg: getSeg(d.calidad_enlace_pct), history: newCalHist },
+            calidad_label: d.calidad_label || prev.calidad_label,
+            baudios_debug: { v: getV(d.baudios_debug, 9600) },
+            tasa_aire_nrf24_kbps: { v: getV(d.tasa_aire_nrf24_kbps, 2000) },
+            ultimo_pkt_timestamp: d.ultimo_pkt_timestamp || prev.ultimo_pkt_timestamp,
             logEntries: newLogs,
             pkts_window: pktsWindow
           };

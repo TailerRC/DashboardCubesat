@@ -16,12 +16,18 @@ export default function VistaGeneral() {
   const { data: commData } = useComunicacionMqtt();
   const { data: orientData } = useOrientacion3DMqtt();
 
+  const fmt = (val, decimals = 2, fallback = '---') => {
+    return (val !== null && val !== undefined && typeof val === 'number' && !isNaN(val))
+      ? val.toFixed(decimals)
+      : fallback;
+  };
+
   // Safety values checks with robust fallbacks
-  const co2Val = ambSensors.co2_ppm?.v !== undefined ? ambSensors.co2_ppm.v.toFixed(2) : '---';
-  const tempVal = ambSensors.temperatura_c?.v !== undefined ? ambSensors.temperatura_c.v.toFixed(2) : '---';
-  const uvVal = ambSensors.radiacion_uv?.v !== undefined ? ambSensors.radiacion_uv.v.toFixed(2) : '---';
-  const altVal = ubiData.altitud_gps?.v !== undefined ? ubiData.altitud_gps.v.toFixed(2) : '---';
-  const voltVal = satData.voltaje_v?.v !== undefined ? satData.voltaje_v.v.toFixed(2) : '---';
+  const co2Val = fmt(ambSensors?.co2_ppm?.v, 2);
+  const tempVal = fmt(ambSensors?.temperatura_c?.v, 2);
+  const uvVal = fmt(ambSensors?.radiacion_uv?.v, 2);
+  const altVal = fmt(ubiData?.altitud_gps?.v, 2);
+  const voltVal = fmt(satData?.voltaje_v?.v, 2);
 
   const cards = [
     {

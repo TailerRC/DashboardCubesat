@@ -1,19 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
 import { useComunicacionMqtt } from '../../mqtt/paquete_mqtt/useComunicacionMqtt';
+import { MqttService } from '../../mqtt/config/mqttConfig';
 import './BottomBar.css';
 
 export default function BottomBar() {
   const [time, setTime] = useState(new Date());
+  const [brokerOnline, setBrokerOnline] = useState(false);
 
   const { data: satData, isConnected: satConnected } = useSateliteMqtt();
   const { data: commData, isConnected: commConnected } = useComunicacionMqtt();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const unsubMqtt = MqttService.subscribeStatus((connected) => {
+      setBrokerOnline(connected);
+    });
+    return () => {
+      clearInterval(timer);
+      unsubMqtt();
+    };
   }, []);
-
   const utcOffset = -time.getTimezoneOffset() / 60;
   const utcLabel = `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
   const shortTime = time.toLocaleTimeString('es-MX', {
@@ -22,7 +29,6 @@ export default function BottomBar() {
     hour12: false,
   });
 
-  const brokerOnline = satConnected || commConnected;
   const activeSensorsCount = satData.sensores_activos?.v !== undefined ? satData.sensores_activos.v : '---';
   const totalSensorsCount = satData.sensores_activos?.total !== undefined ? satData.sensores_activos.total : 7;
   const linkQuality = commData.calidad_enlace_pct?.v !== undefined ? commData.calidad_enlace_pct.v : '---';

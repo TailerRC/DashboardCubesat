@@ -68,10 +68,14 @@ export function useUbicacionMqtt() {
           // Update each numeric key
           keys.forEach(key => {
             const rawVal = packet.data[key];
-            if (rawVal) {
-              const val = rawVal.v;
+            if (rawVal !== undefined && rawVal !== null) {
+              const rawV = (typeof rawVal === 'object' && rawVal !== null) ? rawVal.v : rawVal;
+              const val = (rawV !== null && rawV !== undefined) ? rawV : (prev[key]?.v ?? 0);
+              const rawHaceSeg = (typeof rawVal === 'object' && rawVal !== null) ? rawVal.hace_seg : undefined;
+              const hace_seg = (rawHaceSeg !== undefined && rawHaceSeg !== null) ? rawHaceSeg : (prev[key]?.hace_seg || 0);
+
               // If it's the first real packet, purge mock history!
-              let history = isFirstReal ? [] : (prev[key].history || []);
+              let history = isFirstReal ? [] : (prev[key]?.history || []);
 
               if (key === 'altitud_gps' || key === 'distancia_origen' || key === 'latitud' || key === 'longitud') {
                 history = [...history, { value: val, timestamp: packetTime }];
@@ -82,12 +86,12 @@ export function useUbicacionMqtt() {
 
               nextState[key] = {
                 v: val,
-                hace_seg: rawVal.hace_seg,
+                hace_seg,
                 stale: false,
                 history
               };
 
-              lastValidRecvTimeRef.current[key] = packetTime - (rawVal.hace_seg * 1000);
+              lastValidRecvTimeRef.current[key] = packetTime - (hace_seg * 1000);
             }
           });
         } else {
