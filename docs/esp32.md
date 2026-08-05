@@ -1,7 +1,7 @@
 // =============================================================================
 // CEMPAI CubeSat — Firmware ESP32 OBC con MQTT
 // =============================================================================
-// Sensores ACTIVOS   : GPS NEO-7M · BME280 · GUVA-S12SD · MPU6050 · MQ135
+// Sensores ACTIVOS   : GPS NEO-7M · BME280/BMP280 · GUVA-S12SD · MPU6050 · MQ135
 // Sensores PENDIENTES: INA219 · NRF24L01
 //                      (pines asignados, descomentar al conectar)
 // Broker : broker.hivemq.com:1883 (sin TLS — proyecto demo)
@@ -12,8 +12,6 @@
 //   - PubSubClient       por Nick O'Leary          (MQTT)
 //   - ArduinoJson        por Benoit Blanchon  v6.x  (JSON)
 //   - TinyGPS++          por Mikal Hart             (GPS NMEA) — ya instalada
-//   - Adafruit BME280    por Adafruit               (Temp/Hum/Presión) — ya instalada
-//   - MPU6050            por ElectronicCats          (Acelerómetro/Giroscopio) — ya instalada
 //   - Adafruit INA219    por Adafruit               (PENDIENTE)
 //   - RF24               por TMRh20                  (PENDIENTE)
 // =============================================================================
@@ -24,16 +22,13 @@
 #include <ArduinoJson.h>
 #include <TinyGPS++.h>
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
-#include <MPU6050.h>
 
 // ── Librerías PENDIENTES (descomentar al conectar el sensor físico) ───────────
 // #include <Adafruit_INA219.h>   // INA219  — I2C addr 0x40
 // #include <RF24.h>              // NRF24L01 — SPI HSPI
 
 // =============================================================================
-// CONFIGURACIÓN DE PINES
+// CONFIGURACIÓN DE PINES Y DIRECCIONES I2C
 // =============================================================================
 
 // ── UART2 (GPS NEO-7M) — ACTIVO ──────────────────────────────────────────────
@@ -41,12 +36,11 @@
 #define TXD2     17      // Pin TX2 del ESP32 → conectar a RXD del GPS
 #define GPS_BAUD 9600
 
-// ── I2C Bus — ACTIVO (compartido: BME280 · INA219 · MPU6050) ─────────────────
+// ── I2C Bus — ACTIVO (compartido: BME280/BMP280 · INA219 · MPU6050) ───────────
 #define SDA_PIN      21
 #define SCL_PIN      22
-// Direcciones I2C de cada sensor (iguales al código validado del colega):
-#define BME280_ADDR  0x76   // [ACTIVO]   SDO/CSB en GND
-#define MPU6050_ADDR 0x69   // [ACTIVO]   AD0 en VCC/HIGH
+#define BME_ADDR     0x76   // [ACTIVO]   BME280 / BMP280 en 0x76
+#define MPU_ADDR     0x69   // [ACTIVO]   MPU6050 (AD0 en VCC/HIGH) en 0x69
 //   INA219  → 0x40          [PENDIENTE]
 
 // ── ADC (GUVA-S12SD) — ACTIVO ────────────────────────────────────────────────
@@ -56,7 +50,6 @@
 #define MQ135_PIN 34     // Input-only pin (resistente a 3.3V). Entrada analógica de gas.
 
 // ── SPI HSPI (NRF24L01) — PENDIENTE ─────────────────────────────────────────
-//   HSPI no colisiona con I2C (pines 21/22)
 #define NRF_MOSI 13
 #define NRF_MISO 12
 #define NRF_SCK  14
@@ -85,17 +78,27 @@ const char* MQTT_CLIENT_ID = "cempai_esp32_obc";
 #define TOPIC_COMUNICACION "cempai/cubesat/telemetry/comunicacion"
 
 // =============================================================================
-// INSTANCIAS Y OBJETOS
+// INSTANCIAS Y VARIABLES GLOBALES
 // =============================================================================
 
-// ── Sensores ACTIVOS ─────────────────────────────────────────────────────────────
+// ── GPS ──────────────────────────────────────────────────────────────────────
 TinyGPSPlus      gps;
 HardwareSerial   gpsSerial(2);
-Adafruit_BME280  bme;
-MPU6050          mpu(MPU6050_ADDR);   // igual que el código del colega
 
+// ── BME280/BMP280 (I2C Directo Wire) ─────────────────────────────────────────
 static bool bmeOk = false;
+uint16_t dig_T1, dig_P1;
+int16_t  dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
+int32_t  t_fine = 0;
+float    presionInicial_hPa = 0.0f;
+bool     bmeCalibrado = false;
+
+// ── MPU6050 (I2C Directo Wire) ───────────────────────────────────────────────
 static bool mpuOk = false;
+int16_t rawAX = 0, rawAY = 0, rawAZ = 0;
+float   rollInicial  = 0.0f;
+float   pitchInicial = 0.0f;
+bool    mpuCalibrado = false;
 
 // ── WiFi y MQTT ───────────────────────────────────────────────────────────────
 WiFiClient       espClient;
@@ -119,15 +122,111 @@ static uint32_t totalRecibidos = 0;
 static uint32_t totalPerdidos  = 0;
 static bool     recentWindow[20];
 
-// ── Línea base de presión (relativa al lanzamiento = 0 Pa) ───────────────────
-static float presBase    = 0.0f;
-static bool  presBaseSet = false;
+// ── Calibración de Altitud de Vuelo GPS (NEO-7M) ─────────────────────────────
+static float altitudGpsBase    = 0.0f;
+static bool  altitudGpsBaseSet = false;
+static int   muestrasBaseGps   = 0;
+static float sumaAltitudGps    = 0.0f;
+const  int   MUESTRAS_CALIBRACION_GPS = 10;
+
+// =============================================================================
+// FUNCIONES AUXILIARES I2C — BME280/BMP280
+// =============================================================================
+uint16_t read16_LE(uint8_t reg) {
+  Wire.beginTransmission(BME_ADDR);
+  Wire.write(reg);
+  Wire.endTransmission();
+  Wire.requestFrom((uint8_t)BME_ADDR, (uint8_t)2);
+  return (Wire.read() | (Wire.read() << 8));
+}
+
+int16_t readS16_LE(uint8_t reg) {
+  return (int16_t)read16_LE(reg);
+}
+
+void cargarCalibracionBME() {
+  dig_T1 = read16_LE(0x88);
+  dig_T2 = readS16_LE(0x8A);
+  dig_T3 = readS16_LE(0x8C);
+  dig_P1 = read16_LE(0x8E);
+  dig_P2 = readS16_LE(0x90);
+  dig_P3 = readS16_LE(0x92);
+  dig_P4 = readS16_LE(0x94);
+  dig_P5 = readS16_LE(0x96);
+  dig_P6 = readS16_LE(0x98);
+  dig_P7 = readS16_LE(0x9A);
+  dig_P8 = readS16_LE(0x9C);
+  dig_P9 = readS16_LE(0x9E);
+}
+
+float obtenerTemperaturaBME() {
+  Wire.beginTransmission(BME_ADDR);
+  Wire.write(0xFA);
+  Wire.endTransmission();
+  Wire.requestFrom((uint8_t)BME_ADDR, (uint8_t)3);
+  if (Wire.available() < 3) return 0.0f;
+  
+  int32_t adc_T = ((uint32_t)Wire.read() << 12) | ((uint32_t)Wire.read() << 4) | ((uint32_t)Wire.read() >> 4);
+  int32_t var1 = ((((adc_T >> 3) - ((int32_t)dig_T1 << 1))) * ((int32_t)dig_T2)) >> 11;
+  int32_t var2 = (((((adc_T >> 4) - ((int32_t)dig_T1)) * ((adc_T >> 4) - ((int32_t)dig_T1))) >> 12) * ((int32_t)dig_T3)) >> 14;
+  t_fine = var1 + var2;
+  return (float)((t_fine * 5 + 128) >> 8) / 100.0F;
+}
+
+float obtenerPresionBME() {
+  obtenerTemperaturaBME(); // Actualiza t_fine
+  Wire.beginTransmission(BME_ADDR);
+  Wire.write(0xF7);
+  Wire.endTransmission();
+  Wire.requestFrom((uint8_t)BME_ADDR, (uint8_t)3);
+  if (Wire.available() < 3) return 0.0f;
+
+  int32_t adc_P = ((uint32_t)Wire.read() << 12) | ((uint32_t)Wire.read() << 4) | ((uint32_t)Wire.read() >> 4);
+  int64_t var1 = ((int64_t)t_fine) - 128000;
+  int64_t var2 = var1 * var1 * (int64_t)dig_P6;
+  var2 = var2 + ((var1 * (int64_t)dig_P5) << 17);
+  var2 = var2 + (((int64_t)dig_P4) << 35);
+  var1 = ((var1 * var1 * (int64_t)dig_P3) >> 8) + ((var1 * (int64_t)dig_P2) << 12);
+  var1 = (((((int64_t)1) << 47) + var1)) * ((int64_t)dig_P1) >> 33;
+
+  if (var1 == 0) return 0.0f;
+
+  int64_t p = 1048576 - adc_P;
+  p = (((p << 31) - var2) * 3125) / var1;
+  var1 = (((int64_t)dig_P9) * (p >> 13) * (p >> 13)) >> 25;
+  var2 = (((int64_t)dig_P8) * p) >> 19;
+  p = ((p + var1 + var2) >> 8) + (((int64_t)dig_P7) << 4);
+
+  return (float)p / 25600.0F; // Retorna presión en hPa
+}
+
+// =============================================================================
+// FUNCIONES AUXILIARES I2C — MPU6050
+// =============================================================================
+void obtenerAngulosMPU(float &roll, float &pitch) {
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);
+  Wire.requestFrom((uint8_t)MPU_ADDR, (uint8_t)6, (uint8_t)true);
+
+  if (Wire.available() >= 6) {
+    rawAX = Wire.read() << 8 | Wire.read();
+    rawAY = Wire.read() << 8 | Wire.read();
+    rawAZ = Wire.read() << 8 | Wire.read();
+
+    float ax = rawAX / 16384.0f;
+    float ay = rawAY / 16384.0f;
+    float az = rawAZ / 16384.0f;
+
+    roll  = atan2(ay, az) * 180.0 / M_PI;
+    pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / M_PI;
+  }
+}
 
 // =============================================================================
 // SETUP
 // =============================================================================
 void setup() {
-  // ── Baudrate 115200 (igual que el código probado) ───────────────────────────
   Serial.begin(115200);
   delay(1000);
 
@@ -136,7 +235,7 @@ void setup() {
 
   // ── I2C Bus (SDA=21, SCL=22) ──────────────────────────────────────────────
   Wire.begin(SDA_PIN, SCL_PIN);
-  // NOTA: No usar Wire.setClock(400000) — interfiere con GPS UART y MQTT
+  Wire.setClock(100000);
 
   Serial.println(F("=========================================="));
   Serial.println(F("  CEMPAI CubeSat OBC — Firmware MQTT     "));
@@ -144,27 +243,49 @@ void setup() {
   Serial.print(F("TinyGPS++ v. "));
   Serial.println(TinyGPSPlus::libraryVersion());
 
-  // ── BME280 — secuencia EXACTA del código validado del colega ─────────────────
-  if (!bme.begin(BME280_ADDR, &Wire)) {
-    Serial.println(F("❌ BME280 no detectado en 0x76. Revisa cableado."));
+  // ── Inicializar MPU6050 (Intenta en 0x69, fallback a 0x68) ──────────────────
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x6B); // Registro PWR_MGMT_1
+  Wire.write(0);    // Despertar
+  if (Wire.endTransmission() == 0) {
+    mpuOk = true;
+    Serial.printf("✅ MPU6050 Detectado e Inicializado en 0x%02X\n", MPU_ADDR);
   } else {
-    bmeOk = true;
-    Serial.println(F("✅ BME280 Detectado en 0x76"));
+    // Intentar dirección alternativa 0x68 (AD0 a GND)
+    Wire.beginTransmission(0x68);
+    Wire.write(0x6B);
+    Wire.write(0);
+    if (Wire.endTransmission() == 0) {
+      mpuOk = true;
+      Serial.println(F("✅ MPU6050 Detectado e Inicializado en 0x68 (AD0 GND)"));
+    } else {
+      Serial.println(F("❌ Error: No responde MPU6050 ni en 0x69 ni en 0x68"));
+    }
   }
 
-  // ── MPU6050 — secuencia para chip CLONADO (WHO_AM_I no estándar) ───────────
-  // testConnection() falla en clones porque devuelven WHO_AM_I≠0x68.
-  // Solución: verificar presencia en bus I2C directamente, luego inicializar.
-  Wire.beginTransmission(MPU6050_ADDR);
-  int mpuError = (int)Wire.endTransmission();   // 0 = dispositivo responde en el bus
-  if (mpuError != 0) {
-    Serial.print(F("❌ MPU6050 no responde en bus I2C (err="));
-    Serial.print(mpuError);
-    Serial.println(F("). Verifica SDA=21 SCL=22"));
+  // ── Inicializar BME280/BMP280 (Intenta en 0x76, fallback a 0x77) ───────────
+  Wire.beginTransmission(BME_ADDR);
+  Wire.write(0xF4); // Registro control mediciones
+  Wire.write(0x27); // Modo normal
+  if (Wire.endTransmission() == 0) {
+    cargarCalibracionBME();
+    bmeOk = true;
+    Serial.printf("✅ BME/BMP Detectado e Inicializado en 0x%02X\n", BME_ADDR);
   } else {
-    mpu.initialize();   // despierta el chip del sleep mode (SLEEP bit → 0 en PWR_MGMT_1)
-    mpuOk = true;
-    Serial.println(F("✅ MPU6050 Detectado e inicializado en 0x69 (chip clonado OK)"));
+    // Intentar dirección alternativa 0x77 (SDO a VCC)
+    Wire.beginTransmission(0x77);
+    Wire.write(0xF4);
+    Wire.write(0x27);
+    if (Wire.endTransmission() == 0) {
+      bmeOk = true;
+      // Actualizar BME_ADDR temporalmente para lectura de registros
+      #undef BME_ADDR
+      #define BME_ADDR 0x77
+      cargarCalibracionBME();
+      Serial.println(F("✅ BME/BMP Detectado e Inicializado en 0x77 (SDO VCC)"));
+    } else {
+      Serial.println(F("❌ Error: No responde BME/BMP ni en 0x76 ni en 0x77"));
+    }
   }
 
   // ── GUVA-S12SD (ADC Pin 4) — ACTIVO ───────────────────────────────────────
@@ -178,19 +299,13 @@ void setup() {
   Serial.println(F("       ESTADO DE SENSORES HARDWARE       "));
   Serial.println(F("=========================================="));
   Serial.println(F(" - GPS NEO-7M : ACTIVO (UART2 RX:16 TX:17)"));
-  Serial.print(F(" - BME280     : ")); Serial.println(bmeOk ? F("ACTIVO (I2C 0x76/0x77)") : F("NO DETECTADO"));
+  Serial.print(F(" - BME280/BMP : ")); Serial.println(bmeOk ? F("ACTIVO (I2C 0x76)") : F("NO DETECTADO"));
   Serial.print(F(" - MPU6050    : ")); Serial.println(mpuOk ? F("ACTIVO (I2C 0x69)") : F("NO DETECTADO"));
   Serial.println(F(" - GUVA-S12SD : ACTIVO (ADC Pin 4)"));
   Serial.println(F(" - MQ135      : ACTIVO (ADC Pin 34)"));
   Serial.println(F(" - INA219     : PENDIENTE (I2C 0x40)"));
   Serial.println(F(" - NRF24L01   : PENDIENTE (SPI HSPI)"));
   Serial.println(F("==========================================\n"));
-
-  // ── NRF24L01 (SPI HSPI) — PENDIENTE ───────────────────────────────────────
-  // Conectar: MOSI=13, MISO=12, SCK=14, CE=25, CSN=26. Descomentar al conectar:
-  // radio.begin();
-  // radio.setChannel(1);
-  // radio.setPALevel(RF24_PA_LOW);
 
   // ── WiFi ───────────────────────────────────────────────────────────────────
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -208,7 +323,6 @@ void setup() {
   mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
   mqttClient.setBufferSize(1024);  // CRÍTICO: JSONs del dashboard ~400-520 bytes
 
-  // Inicializar ventana de paquetes RF en estado "todo OK"
   for (int i = 0; i < 20; i++) recentWindow[i] = true;
 
   Serial.println(F("[CEMPAI] OBC listo. Publicando telemetría cada 750ms..."));
@@ -233,7 +347,7 @@ void reconnectMQTT() {
 }
 
 // =============================================================================
-// FUNCIONES DE IMPRESIÓN POR SERIAL — ORIGINALES, SIN MODIFICAR
+// FUNCIONES DE IMPRESIÓN POR SERIAL
 // =============================================================================
 
 void imprimirUbicacion() {
@@ -288,16 +402,37 @@ void imprimirOtrosDatos() {
   if (gps.satellites.isValid()) Serial.print(gps.satellites.value());
   else                          Serial.print(F("N/A"));
 
-  Serial.print(F(" | Altitud GPS: "));
+  Serial.print(F(" | Alt MSL: "));
   if (gps.altitude.isValid()) { Serial.print(gps.altitude.meters(), 1); Serial.print(F("m")); }
   else                          Serial.print(F("N/A"));
+
+  Serial.print(F(" | Alt Vuelo: "));
+  if (gps.altitude.isValid() && altitudGpsBaseSet) {
+    float altVuelo = gps.altitude.meters() - altitudGpsBase;
+    Serial.print(altVuelo, 1); Serial.print(F("m"));
+  } else {
+    Serial.print(F("Calibrando/No Fix"));
+  }
 }
 
 void imprimirBME280() {
   if (bmeOk) {
-    Serial.print(F(" | Temp: "));   Serial.print(bme.readTemperature(), 1); Serial.print(F("°C"));
-    Serial.print(F(" | Hum: "));    Serial.print(bme.readHumidity(), 1);    Serial.print(F("%"));
-    Serial.print(F(" | Presión: ")); Serial.print(bme.readPressure() / 100.0F, 1); Serial.print(F(" hPa"));
+    float tempBME = obtenerTemperaturaBME();
+    float presBME = obtenerPresionBME(); // hPa
+
+    if (!bmeCalibrado && presBME > 300.0f) {
+      presionInicial_hPa = presBME;
+      bmeCalibrado = true;
+    }
+
+    float altitudRelativaBaro = 0.0f;
+    if (bmeCalibrado) {
+      altitudRelativaBaro = 44330.0f * (1.0f - pow(presBME / presionInicial_hPa, 0.19029495f));
+    }
+
+    Serial.print(F(" | Temp: "));   Serial.print(tempBME, 1); Serial.print(F("°C"));
+    Serial.print(F(" | Presión: ")); Serial.print(presBME, 1); Serial.print(F(" hPa"));
+    Serial.print(F(" | Alt Baro: ")); Serial.print(altitudRelativaBaro, 1); Serial.print(F("m"));
   } else {
     Serial.print(F(" | BME280: N/A"));
   }
@@ -322,22 +457,21 @@ void imprimirMQ135() {
 
 void imprimirMPU6050() {
   if (mpuOk) {
-    int16_t ax, ay, az, gx, gy, gz;
-    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    float rollActual = 0.0f, pitchActual = 0.0f;
+    obtenerAngulosMPU(rollActual, pitchActual);
 
-    float accel_x_g = ax / 16384.0f;
-    float accel_y_g = ay / 16384.0f;
-    float accel_z_g = az / 16384.0f;
+    if (!mpuCalibrado) {
+      rollInicial  = rollActual;
+      pitchInicial = pitchActual;
+      mpuCalibrado = true;
+    }
 
-    float gyro_x_dps = gx / 131.0f;
-    float gyro_y_dps = gy / 131.0f;
-    float gyro_z_dps = gz / 131.0f;
+    float rollRelativo  = rollActual - rollInicial;
+    float pitchRelativo = pitchActual - pitchInicial;
+    float accel_x_g     = rawAX / 16384.0f;
 
-    float pitch = atan2(-accel_x_g, sqrt(accel_y_g * accel_y_g + accel_z_g * accel_z_g)) * 180.0 / M_PI;
-    float roll  = atan2(accel_y_g, accel_z_g) * 180.0 / M_PI;
-
-    Serial.print(F(" | Pitch: ")); Serial.print(pitch, 1); Serial.print(F("°"));
-    Serial.print(F(" | Roll: "));  Serial.print(roll, 1);  Serial.print(F("°"));
+    Serial.print(F(" | Pitch: ")); Serial.print(pitchRelativo, 1); Serial.print(F("°"));
+    Serial.print(F(" | Roll: "));  Serial.print(rollRelativo, 1);  Serial.print(F("°"));
     Serial.print(F(" | AccX: "));  Serial.print(accel_x_g, 2); Serial.print(F("g"));
   } else {
     Serial.print(F(" | MPU6050: N/A"));
@@ -345,35 +479,47 @@ void imprimirMPU6050() {
 }
 
 // =============================================================================
-// FUNCIONES MQTT — PUBLICAR TÓPICOS (una por tópico)
+// FUNCIONES MQTT — PUBLICAR TÓPICOS
 // =============================================================================
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TÓPICO 1: ambiental
-// ACTIVO   : BME280 (temp · hum · presión relativa) · GUVA-S12SD (UV) · MQ135 (CO2)
-// PENDIENTE: Ninguno en este tópico
+// ACTIVO   : BME280/BMP280 (temp · hum · presión relativa Pa) · GUVA-S12SD (UV) · MQ135 (CO2)
 // ─────────────────────────────────────────────────────────────────────────────
 void publicarAmbiental() {
   pkt_amb++;
 
-  float temp_c   = bmeOk ? bme.readTemperature() : 0.0f;
-  float hum_pct  = bmeOk ? bme.readHumidity() : 0.0f;
-  float pres_abs = bmeOk ? bme.readPressure() : 0.0f;
+  float temp_c   = 0.0f;
+  float pres_hpa = 0.0f;
+  float pres_pa  = 0.0f;
+  float pres_rel_pa = 0.0f;
 
-  // Presión relativa al momento de encendido (0 Pa = lanzamiento)
-  if (!presBaseSet && bmeOk) { presBase = pres_abs; presBaseSet = true; }
-  float pres_rel = bmeOk ? (pres_abs - presBase) : 0.0f;
+  if (bmeOk) {
+    temp_c   = obtenerTemperaturaBME();
+    pres_hpa = obtenerPresionBME();
+    pres_pa  = pres_hpa * 100.0f; // hPa a Pa
+
+    if (!bmeCalibrado && pres_hpa > 300.0f) {
+      presionInicial_hPa = pres_hpa;
+      bmeCalibrado = true;
+    }
+
+    if (bmeCalibrado) {
+      pres_rel_pa = (pres_hpa - presionInicial_hPa) * 100.0f; // Pa relativos al despegue
+    }
+  }
+
+  float hum_pct = 0.0f; // Si es BMP280 o no mide humedad, por defecto 0.0
 
   int   uv_raw  = analogRead(UV_PIN);
   float uv_volt = (uv_raw / 4095.0f) * 3.3f;
   float uv_idx  = constrain(uv_volt / 0.1f, 0.0f, 15.0f);
 
-  // MQ135 — ACTIVO (ADC Pin 34)
   int   mq_raw  = analogRead(MQ135_PIN);
   float mq_volt = (mq_raw / 4095.0f) * 3.3f;
   float co2_ppm = 400.0f + (mq_volt / 3.3f) * 1600.0f;
 
-  bool alert = (temp_c > 40) || (hum_pct > 85) || (fabsf(pres_rel) > 45) || (uv_idx > 7.5);
+  bool alert = (temp_c > 40) || (hum_pct > 85) || (fabsf(pres_rel_pa) > 4500) || (uv_idx > 7.5);
 
   StaticJsonDocument<1024> doc;
   doc["topic"]            = TOPIC_AMBIENTAL;
@@ -394,7 +540,7 @@ void publicarAmbiental() {
   hum["v"] = round(hum_pct * 10) / 10.0; hum["hace_seg"] = 0.0; hum["umbral_alerta"] = 85;
 
   JsonObject pres = data.createNestedObject("presion_pa");
-  pres["v"] = round(pres_rel * 100) / 100.0; pres["hace_seg"] = 0.0; pres["umbral_alerta"] = 45;
+  pres["v"] = round(pres_rel_pa * 100) / 100.0; pres["hace_seg"] = 0.0; pres["umbral_alerta"] = 4500;
 
   JsonObject uv   = data.createNestedObject("radiacion_uv");
   uv["v"] = round(uv_idx * 10) / 10.0; uv["hace_seg"] = 0.0; uv["umbral_alerta"] = 7.5;
@@ -402,15 +548,14 @@ void publicarAmbiental() {
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_AMBIENTAL, buffer, bytes);
-  Serial.printf("[TX AMB] pkt#%d temp=%.1f hum=%.1f uv=%.1f (%d bytes)\n",
-                pkt_amb, temp_c, hum_pct, uv_idx, bytes);
+  Serial.printf("[TX AMB] pkt#%d temp=%.1f presRel=%.1fPa uv=%.1f (%d bytes)\n",
+                pkt_amb, temp_c, pres_rel_pa, uv_idx, bytes);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TÓPICO 2: satelite
 // ACTIVO   : ESP32 interno (temp MCU · uptime)
 // PENDIENTE: INA219 → voltaje/corriente/consumo = 0.0 hasta conectar
-//            INA219 usa I2C SDA=21, SCL=22, addr 0x40
 // ─────────────────────────────────────────────────────────────────────────────
 void publicarSatelite() {
   pkt_sat++;
@@ -418,13 +563,9 @@ void publicarSatelite() {
   float    temp_mcu = temperatureRead();
   uint32_t uptime   = millis() / 1000;
 
-  // INA219 — PENDIENTE (I2C SDA=21, SCL=22, addr 0x40). Descomentar al conectar:
   float voltaje_v    = 0.0f;
   float corriente_ma = 0.0f;
   float consumo_w    = 0.0f;
-  // voltaje_v    = ina219.getBusVoltage_V();
-  // corriente_ma = ina219.getCurrent_mA();
-  // consumo_w    = (voltaje_v * corriente_ma) / 1000.0f;
 
   StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_SATELITE;
@@ -444,7 +585,7 @@ void publicarSatelite() {
   data["memoria_flash_ok"]["hace_seg"]= 0.0;
 
   JsonObject sens = data.createNestedObject("sensores_activos");
-  sens["v"] = 5;  // 5 sensores activos (GPS, BME280, GUVA, MPU6050, MQ135)
+  sens["v"] = 5;  // 5 sensores activos (GPS, BME/BMP, GUVA, MPU6050, MQ135)
   sens["total"] = 7;
   sens["hace_seg"] = 0.0;
 
@@ -457,13 +598,28 @@ void publicarSatelite() {
 // ─────────────────────────────────────────────────────────────────────────────
 // TÓPICO 3: ubicacion
 // ACTIVO: GPS NEO-7M (UART2 RX=16, TX=17)
-// Solo publica si gps.location.isValid()
 // ─────────────────────────────────────────────────────────────────────────────
 void publicarUbicacion() {
   if (!gps.location.isValid()) return;
   pkt_gps++;
 
-  // Fecha y hora UTC ajustada GMT-5 (igual que imprimirFechaHora)
+  float altitud_msl = gps.altitude.isValid() ? (float)gps.altitude.meters() : 0.0f;
+  float altitud_vuelo = 0.0f;
+
+  if (!altitudGpsBaseSet && gps.altitude.isValid() && gps.hdop.isValid() && gps.hdop.hdop() <= 5.0f && gps.satellites.value() >= 4) {
+    sumaAltitudGps += altitud_msl;
+    muestrasBaseGps++;
+    if (muestrasBaseGps >= MUESTRAS_CALIBRACION_GPS) {
+      altitudGpsBase = sumaAltitudGps / (float)MUESTRAS_CALIBRACION_GPS;
+      altitudGpsBaseSet = true;
+      Serial.printf("[GPS CALIBRADO] Altitud Base Lanzamiento (MSL): %.2fm\n", altitudGpsBase);
+    }
+  }
+
+  if (altitudGpsBaseSet) {
+    altitud_vuelo = altitud_msl - altitudGpsBase;
+  }
+
   char fecha[12]   = "0000-00-00";
   char hora_str[10] = "00:00:00";
 
@@ -487,8 +643,10 @@ void publicarUbicacion() {
   data["latitud"]["hace_seg"]     = 0.0;
   data["longitud"]["v"]           = gps.location.lng();
   data["longitud"]["hace_seg"]    = 0.0;
-  data["altitud_gps"]["v"]        = round(gps.altitude.meters() * 10) / 10.0;
+  data["altitud_gps"]["v"]        = round(altitud_vuelo * 10) / 10.0;
   data["altitud_gps"]["hace_seg"] = 0.0;
+  data["altitud_gps_msl"]["v"]    = round(altitud_msl * 10) / 10.0;
+  data["altitud_gps_msl"]["hace_seg"] = 0.0;
   data["velocidad_kmh"]["v"]      = round(gps.speed.kmph() * 10) / 10.0;
   data["velocidad_kmh"]["hace_seg"]  = 0.0;
   data["velocidad_vertical"]["v"]    = 0.0;
@@ -511,9 +669,9 @@ void publicarUbicacion() {
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_UBICACION, buffer, bytes);
-  Serial.printf("[TX GPS] pkt#%d lat=%.6f lon=%.6f alt=%.1fm sats=%d\n",
+  Serial.printf("[TX GPS] pkt#%d lat=%.6f lon=%.6f altVuelo=%.1fm altMSL=%.1fm sats=%d\n",
                 pkt_gps, gps.location.lat(), gps.location.lng(),
-                gps.altitude.meters(), gps.satellites.value());
+                altitud_vuelo, altitud_msl, gps.satellites.value());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -525,26 +683,28 @@ void publicarOrientacion3D() {
 
   float accel_x = 0.0f, accel_y = 0.0f, accel_z = 0.0f;
   float gyro_x  = 0.0f, gyro_y  = 0.0f, gyro_z  = 0.0f;
-  float pitch   = 0.0f, roll    = 0.0f;
+  float pitchRelativo = 0.0f, rollRelativo = 0.0f;
 
   if (mpuOk) {
-    int16_t ax, ay, az, gx, gy, gz;
-    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    float rollActual = 0.0f, pitchActual = 0.0f;
+    obtenerAngulosMPU(rollActual, pitchActual);
 
-    float accel_x_g = ax / 16384.0f;
-    float accel_y_g = ay / 16384.0f;
-    float accel_z_g = az / 16384.0f;
+    if (!mpuCalibrado) {
+      rollInicial  = rollActual;
+      pitchInicial = pitchActual;
+      mpuCalibrado = true;
+    }
+
+    rollRelativo  = rollActual - rollInicial;
+    pitchRelativo = pitchActual - pitchInicial;
+
+    float accel_x_g = rawAX / 16384.0f;
+    float accel_y_g = rawAY / 16384.0f;
+    float accel_z_g = rawAZ / 16384.0f;
 
     accel_x = accel_x_g * 9.81f;
     accel_y = accel_y_g * 9.81f;
     accel_z = accel_z_g * 9.81f;
-
-    gyro_x  = gx / 131.0f;
-    gyro_y  = gy / 131.0f;
-    gyro_z  = gz / 131.0f;
-
-    pitch = atan2(-accel_x_g, sqrt(accel_y_g * accel_y_g + accel_z_g * accel_z_g)) * 180.0 / M_PI;
-    roll  = atan2(accel_y_g, accel_z_g) * 180.0 / M_PI;
   }
 
   StaticJsonDocument<1024> doc;
@@ -554,17 +714,17 @@ void publicarOrientacion3D() {
   doc["crc_valido"] = true;
 
   JsonObject data = doc.createNestedObject("data");
-  data["cabeceo_deg"]["v"]   = round(pitch * 10) / 10.0;   data["cabeceo_deg"]["hace_seg"]  = 0.0;
-  data["balanceo_deg"]["v"]  = round(roll * 10) / 10.0;    data["balanceo_deg"]["hace_seg"] = 0.0;
-  data["accel_x"]["v"]       = round(accel_x * 100) / 100.0; data["accel_x"]["hace_seg"]  = 0.0;
-  data["accel_y"]["v"]       = round(accel_y * 100) / 100.0; data["accel_y"]["hace_seg"]  = 0.0;
-  data["accel_z"]["v"]       = round(accel_z * 100) / 100.0; data["accel_z"]["hace_seg"]  = 0.0;
-  data["gyro_x_dps"]["v"]    = round(gyro_x * 10) / 10.0;  data["gyro_x_dps"]["hace_seg"]   = 0.0;
-  data["gyro_y_dps"]["v"]    = round(gyro_y * 10) / 10.0;  data["gyro_y_dps"]["hace_seg"]   = 0.0;
-  data["gyro_z_dps"]["v"]    = round(gyro_z * 10) / 10.0;  data["gyro_z_dps"]["hace_seg"]   = 0.0;
-  data["inercial_x"]["v"]    = round(accel_x * 100) / 100.0; data["inercial_x"]["hace_seg"] = 0.0;
-  data["inercial_y"]["v"]    = round(accel_y * 100) / 100.0; data["inercial_y"]["hace_seg"] = 0.0;
-  data["inercial_z"]["v"]    = round(accel_z * 100) / 100.0; data["inercial_z"]["hace_seg"] = 0.0;
+  data["cabeceo_deg"]["v"]   = round(pitchRelativo * 10) / 10.0;   data["cabeceo_deg"]["hace_seg"]  = 0.0;
+  data["balanceo_deg"]["v"]  = round(rollRelativo * 10) / 10.0;    data["balanceo_deg"]["hace_seg"] = 0.0;
+  data["accel_x"]["v"]       = round(accel_x * 100) / 100.0;       data["accel_x"]["hace_seg"]  = 0.0;
+  data["accel_y"]["v"]       = round(accel_y * 100) / 100.0;       data["accel_y"]["hace_seg"]  = 0.0;
+  data["accel_z"]["v"]       = round(accel_z * 100) / 100.0;       data["accel_z"]["hace_seg"]  = 0.0;
+  data["gyro_x_dps"]["v"]    = round(gyro_x * 10) / 10.0;        data["gyro_x_dps"]["hace_seg"]   = 0.0;
+  data["gyro_y_dps"]["v"]    = round(gyro_y * 10) / 10.0;        data["gyro_y_dps"]["hace_seg"]   = 0.0;
+  data["gyro_z_dps"]["v"]    = round(gyro_z * 10) / 10.0;        data["gyro_z_dps"]["hace_seg"]   = 0.0;
+  data["inercial_x"]["v"]    = round(accel_x * 100) / 100.0;       data["inercial_x"]["hace_seg"] = 0.0;
+  data["inercial_y"]["v"]    = round(accel_y * 100) / 100.0;       data["inercial_y"]["hace_seg"] = 0.0;
+  data["inercial_z"]["v"]    = round(accel_z * 100) / 100.0;       data["inercial_z"]["hace_seg"] = 0.0;
 
   JsonObject yaw = data.createNestedObject("giro_yaw_deg");
   yaw["v"] = 0.0; yaw["hace_seg"] = 0.0; yaw["drift_acumulado"] = 0.0;
@@ -572,19 +732,19 @@ void publicarOrientacion3D() {
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_ORIENTACION, buffer, bytes);
-  Serial.printf("[TX ORI] pkt#%d pitch=%.1f° roll=%.1f° accX=%.2f\n", pkt_ori, pitch, roll, accel_x);
+  Serial.printf("[TX ORI] pkt#%d pitch=%.1f° roll=%.1f° accX=%.2f\n", pkt_ori, pitchRelativo, rollRelativo, accel_x);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TÓPICO 5: mision
-// ACTIVO   : altitud del GPS · uptime del ESP32
-// PENDIENTE: cabeceo/balanceo del MPU6050 (I2C SDA=21, SCL=22, addr 0x69)
+// ACTIVO   : altitud de vuelo del GPS · uptime del ESP32 · cabeceo/balanceo del MPU6050
 // ─────────────────────────────────────────────────────────────────────────────
 void publicarMision() {
   pkt_mis++;
 
-  float    altitud_m = gps.altitude.isValid() ? (float)gps.altitude.meters() : 0.0f;
-  uint32_t t_vuelo   = millis() / 1000;
+  float    altitud_msl   = gps.altitude.isValid() ? (float)gps.altitude.meters() : 0.0f;
+  float    altitud_vuelo = altitudGpsBaseSet ? (altitud_msl - altitudGpsBase) : 0.0f;
+  uint32_t t_vuelo       = millis() / 1000;
 
   StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_MISION;
@@ -593,28 +753,31 @@ void publicarMision() {
   doc["crc_valido"] = true;
 
   JsonObject data = doc.createNestedObject("data");
-  data["fase_cdr"]       = "PREPARACION_TIERRA"; // Actualizar fase_idx manualmente según misión
+  data["fase_cdr"]       = "PREPARACION_TIERRA";
   data["fase_cdr_index"] = 0;
   data["fase_ui"]        = "INICIALIZACION";
 
-  data["altitud_m"]["v"]             = round(altitud_m * 10) / 10.0;
+  data["altitud_m"]["v"]             = round(altitud_vuelo * 10) / 10.0;
   data["altitud_m"]["hace_seg"]      = 0.0;
   data["velocidad_vertical_ms"]["v"] = 0.0;
   data["velocidad_vertical_ms"]["hace_seg"] = 0.0;
   data["t_vuelo_seg"]["v"]           = t_vuelo;
   data["t_vuelo_seg"]["hace_seg"]    = 0.0;
-  float pitch = 0.0f, roll = 0.0f;
+
+  float pitchRelativo = 0.0f, rollRelativo = 0.0f;
   if (mpuOk) {
-    int16_t ax, ay, az, gx, gy, gz;
-    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    float accel_x_g = ax / 16384.0f;
-    float accel_y_g = ay / 16384.0f;
-    float accel_z_g = az / 16384.0f;
-    pitch = atan2(-accel_x_g, sqrt(accel_y_g * accel_y_g + accel_z_g * accel_z_g)) * 180.0 / M_PI;
-    roll  = atan2(accel_y_g, accel_z_g) * 180.0 / M_PI;
+    float r = 0.0f, p = 0.0f;
+    obtenerAngulosMPU(r, p);
+    if (!mpuCalibrado) {
+      rollInicial = r;
+      pitchInicial = p;
+      mpuCalibrado = true;
+    }
+    rollRelativo = r - rollInicial;
+    pitchRelativo = p - pitchInicial;
   }
-  data["cabeceo_deg"]["v"]           = round(pitch * 10) / 10.0; data["cabeceo_deg"]["hace_seg"]  = 0.0;
-  data["balanceo_deg"]["v"]          = round(roll * 10) / 10.0;  data["balanceo_deg"]["hace_seg"] = 0.0;
+  data["cabeceo_deg"]["v"]           = round(pitchRelativo * 10) / 10.0; data["cabeceo_deg"]["hace_seg"]  = 0.0;
+  data["balanceo_deg"]["v"]          = round(rollRelativo * 10) / 10.0;  data["balanceo_deg"]["hace_seg"] = 0.0;
 
   JsonObject yaw = data.createNestedObject("giro_yaw_deg");
   yaw["v"] = 0.0; yaw["hace_seg"] = 0.0; yaw["drift_acumulado"] = 0.0;
@@ -624,19 +787,17 @@ void publicarMision() {
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_MISION, buffer, bytes);
-  Serial.printf("[TX MIS] pkt#%d alt=%.1fm t=%ds\n", pkt_mis, altitud_m, t_vuelo);
+  Serial.printf("[TX MIS] pkt#%d altVuelo=%.1fm t=%ds\n", pkt_mis, altitud_vuelo, t_vuelo);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TÓPICO 6: comunicacion
 // ACTIVO   : contadores de paquetes MQTT emulados vía WiFi
-// PENDIENTE: NRF24L01 (SPI HSPI MOSI=13, MISO=12, SCK=14, CE=25, CSN=26)
 // ─────────────────────────────────────────────────────────────────────────────
 void publicarComunicacion() {
   pkt_com++;
   totalEnviados++;
 
-  // Ventana deslizante de 20 paquetes (calidad de enlace WiFi/MQTT)
   for (int i = 0; i < 19; i++) recentWindow[i] = recentWindow[i + 1];
   recentWindow[19] = mqttClient.connected();
 
@@ -672,7 +833,6 @@ void publicarComunicacion() {
   data["paquetes_recibidos"]["hace_seg"]= 0.0;
   data["paquetes_perdidos"]["v"]       = totalPerdidos;
   data["paquetes_perdidos"]["hace_seg"]= 0.0;
-  // NRF24L01 PENDIENTE (HSPI MOSI=13,MISO=12,SCK=14,CE=25,CSN=26). Valores fijos hasta conectar:
   data["frecuencia_ghz"]["v"]          = 2.401;
   data["frecuencia_ghz"]["hace_seg"]   = 0.0;
   data["canal_nrf24"]["v"]             = 1;
@@ -701,11 +861,9 @@ void publicarComunicacion() {
 // LOOP PRINCIPAL
 // =============================================================================
 void loop() {
-  // ── MQTT keepalive ──────────────────────────────────────────────────────────
   if (!mqttClient.connected()) reconnectMQTT();
   mqttClient.loop();
 
-  // ── Leer GPS en cada iteración del loop (sin bloquear) ────────────────────
   while (gpsSerial.available() > 0) {
     gps.encode(gpsSerial.read());
   }
@@ -714,7 +872,7 @@ void loop() {
   if (millis() - ultimoTiempo > 750) {    // 750ms — frecuencia requerida por el dashboard
     ultimoTiempo = millis();
 
-    // ── Funciones originales de impresión por Serial (SIN CAMBIOS) ────────────
+    // Impresión por Serial
     imprimirUbicacion();
     imprimirFechaHora();
     imprimirOtrosDatos();
@@ -724,16 +882,15 @@ void loop() {
     imprimirMPU6050();
     Serial.println();
 
-    // Diagnóstico GPS
     if (millis() > 5000 && gps.charsProcessed() < 10) {
       Serial.println(F("ERROR: No se reciben datos del GPS. Revisa cableado TXD/RXD."));
     }
 
-    // ── Publicar por MQTT ──────────────────────────────────────────────────────
+    // Publicación por MQTT
     if (mqttClient.connected()) {
       publicarAmbiental();
       publicarSatelite();
-      publicarUbicacion();      // solo si gps.location.isValid()
+      publicarUbicacion();      // publica si gps.location.isValid()
       publicarOrientacion3D();
       publicarMision();
       publicarComunicacion();
