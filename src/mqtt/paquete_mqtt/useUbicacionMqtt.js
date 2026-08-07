@@ -70,7 +70,10 @@ export function useUbicacionMqtt() {
             const rawVal = packet.data[key];
             if (rawVal !== undefined && rawVal !== null) {
               const rawV = (typeof rawVal === 'object' && rawVal !== null) ? rawVal.v : rawVal;
-              const val = (rawV !== null && rawV !== undefined) ? rawV : (prev[key]?.v ?? 0);
+              let val = (rawV !== null && rawV !== undefined) ? rawV : (prev[key]?.v ?? 0);
+              if (key === 'altitud_gps') {
+                val = Math.min(100.0, Math.max(0.0, val));
+              }
               const rawHaceSeg = (typeof rawVal === 'object' && rawVal !== null) ? rawVal.hace_seg : undefined;
               const hace_seg = (rawHaceSeg !== undefined && rawHaceSeg !== null) ? rawHaceSeg : (prev[key]?.hace_seg || 0);
 
