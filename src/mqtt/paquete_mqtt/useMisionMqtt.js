@@ -39,7 +39,8 @@ export function useMisionMqtt() {
         const d = packet.data;
 
         setData(prev => {
-          const rawAlt = (d.altitud_m?.v !== undefined && d.altitud_m?.v !== null) ? d.altitud_m.v : 0;
+          let rawAlt = (d.altitud_m?.v !== undefined && d.altitud_m?.v !== null) ? d.altitud_m.v : 0;
+          rawAlt = Math.min(100.0, Math.max(0.0, rawAlt));
           phaseStateRef.current = updateMissionPhaseState(rawAlt, phaseStateRef.current);
           const computedFaseUI = phaseStateRef.current.currentPhase;
 

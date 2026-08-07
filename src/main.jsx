@@ -10,11 +10,12 @@ import { startMisionMockPublisher } from './mqtt/simulacion/misionMock'
 import { startComunicacionMockPublisher } from './mqtt/simulacion/comunicacionMock'
 import { startOrientacion3DMockPublisher } from './mqtt/simulacion/orientacion3dMock'
 
-// Mock publishers desactivados para usar ÚNICAMENTE telemetría real del ESP32
-// startAmbientalMockPublisher();
+// ── SIMULADORES MOCK DESACTIVADOS ──────────────────────────
+// Todos los simuladores desactivados para recibir telemetría real por MQTT.
 // startUbicacionMockPublisher();
-// startSateliteMockPublisher();
 // startMisionMockPublisher();
+// startAmbientalMockPublisher();
+// startSateliteMockPublisher();
 // startComunicacionMockPublisher();
 // startOrientacion3DMockPublisher();
 

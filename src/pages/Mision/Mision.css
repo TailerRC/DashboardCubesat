@@ -287,10 +287,10 @@
   color: #9ca3af;
 }
 
-/* ─── 2 Stat Cards Row ─── */
+/* ─── Stat Card Row (Full Width) ─── */
 .mision-stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 

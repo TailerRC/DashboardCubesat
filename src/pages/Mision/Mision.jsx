@@ -33,7 +33,7 @@ export default function Mision() {
 
   const altVals = altitudHist.map(pt => pt.value);
   const maxAltInHist = altVals.length > 0 ? Math.max(...altVals) : 0;
-  const altEffectiveMax = Math.max(150, maxAltInHist * 1.15);
+  const altEffectiveMax = 100;
 
   return (
     <div className={`mision-view ${!isConnected ? 'view-stale' : ''}`}>
@@ -123,18 +123,12 @@ export default function Mision() {
         </div>
       </section>
 
-      {/* ── Stat KPI Cards Row (2 Columns: Altitud Actual y Velocidad Vertical) ── */}
+      {/* ── Stat KPI Card (Altitud Actual) ── */}
       <section className="mision-stats-grid">
         <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#ffeb3b' }}>
           <span className="mision-stat-label">Altitud Actual</span>
           <span className="mision-stat-value text-yellow">{currentAltitud.toFixed(1)} <span style={{fontSize:'16px'}}>m</span></span>
           <span className="mision-stat-sub">Altitud de Vuelo (GPS)</span>
-        </div>
-
-        <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
-          <span className="mision-stat-label">Velocidad Vertical</span>
-          <span className="mision-stat-value text-blue">{misionData.velocidad_vertical_ms.v > 0 ? `+${misionData.velocidad_vertical_ms.v}` : misionData.velocidad_vertical_ms.v} <span style={{fontSize:'16px'}}>m/s</span></span>
-          <span className="mision-stat-sub">{misionData.velocidad_vertical_ms.v < 0 ? 'Descendiendo' : misionData.velocidad_vertical_ms.v > 0 ? 'Ascendiendo' : 'Estable'}</span>
         </div>
       </section>
 

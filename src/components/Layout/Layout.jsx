@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import BottomBar from './BottomBar';
+import CelebrationOverlay from '../CelebrationOverlay/CelebrationOverlay';
 import './Layout.css';
 
 export default function Layout() {
@@ -46,6 +47,7 @@ export default function Layout() {
 
   return (
     <div className="layout">
+      <CelebrationOverlay />
       <Sidebar />
       <div className="layout-main">
         <TopBar viewName={viewName} scrollPct={scrollPct} />

@@ -18,22 +18,43 @@ let timerId = null;
 let simulatedTimeSecs = 0;
 
 export function getUbicacionValueAtTime(secondsElapsed) {
-  const cycleTime = secondsElapsed % 120;
+  const cycleTime = secondsElapsed % 65; // 65-second total flight cycle
 
-  // 1. Altitud GPS (Ascent/Descent curve peaking at 115m)
   let altitud = 0;
   let velocidad_vertical = 0;
-  if (cycleTime < 60) {
-    altitud = Math.sin((cycleTime / 60) * (Math.PI / 2)) * 115;
-    velocidad_vertical = 3.0 * Math.cos((cycleTime / 60) * (Math.PI / 2));
+
+  if (cycleTime < 3) {
+    // 0-3s: Stage 1 - INICIALIZACIÓN (Ground Launchpad at 0m)
+    altitud = 0.0;
+    velocidad_vertical = 0.0;
+  } else if (cycleTime < 18) {
+    // 3-18s: Stage 2 - ASCENSO (Gradually climbs from 0m to 100m over 15s)
+    const progress = (cycleTime - 3) / 15;
+    altitud = progress * 100.0;
+    velocidad_vertical = 6.67;
+  } else if (cycleTime < 30) {
+    // 18-30s: Stage 3 - DESCENSO (Gradually drops from 100m down to 30m)
+    const progress = (cycleTime - 18) / 12;
+    altitud = 100.0 - progress * 70.0;
+    velocidad_vertical = -5.83;
+  } else if (cycleTime < 36) {
+    // 30-36s: Stage 4 - PROXIMIDAD AL SUELO (Drops from 30m down to 5m)
+    const progress = (cycleTime - 30) / 6;
+    altitud = 30.0 - progress * 25.0;
+    velocidad_vertical = -4.17;
+  } else if (cycleTime < 42) {
+    // 36-42s: Stage 5 - ATERRIZADO Touchdown (Drops from 5m down to 0m)
+    const progress = (cycleTime - 36) / 6;
+    altitud = Math.max(0.0, 5.0 - progress * 5.0);
+    velocidad_vertical = -0.83;
   } else {
-    altitud = Math.cos(((cycleTime - 60) / 60) * (Math.PI / 2)) * 115;
-    velocidad_vertical = -3.0 * Math.sin(((cycleTime - 60) / 60) * (Math.PI / 2));
+    // 42-65s: ATERRIZADO Hold (Maintains 0m after landing)
+    altitud = 0.0;
+    velocidad_vertical = 0.0;
   }
-  // Add minor noise
-  altitud += (Math.random() - 0.5) * 1.5;
-  if (altitud < 0) altitud = 0;
-  velocidad_vertical += (Math.random() - 0.5) * 0.4;
+
+  // Hard clamp altitude between 0m and 100m max
+  altitud = Math.min(100.0, Math.max(0.0, altitud));
 
   // Constants for relative conversion
   const cosLat0 = Math.cos(LAUNCH_LAT * Math.PI / 180);
@@ -43,19 +64,18 @@ export function getUbicacionValueAtTime(secondsElapsed) {
   const x_land = (LAND_LON - LAUNCH_LON) * X_METERS_PER_DEG;
   const y_land = (LAND_LAT - LAUNCH_LAT) * Y_METERS_PER_DEG;
 
-  // 2. Cartesian coordinates relative to launch (0,0) in meters
-  const latJitter = (Math.random() - 0.5) * 0.3; // meters
+  // Cartesian coordinates relative to launch (0,0) in meters
+  const latJitter = (Math.random() - 0.5) * 0.3;
   const lonJitter = (Math.random() - 0.5) * 0.3;
 
   let currentX = 0;
   let currentY = 0;
 
-  if (cycleTime < 60) {
+  if (cycleTime < 18) {
     currentX = lonJitter;
     currentY = latJitter;
   } else {
-    const descentRatio = (cycleTime - 60) / 60;
-    // Add wind wave drift deviation (0 at start and end of descent)
+    const descentRatio = Math.min(1, (cycleTime - 18) / 24);
     const waveX = Math.sin(descentRatio * Math.PI * 3) * 45.0 * descentRatio * (1 - descentRatio);
     const waveY = Math.sin(descentRatio * Math.PI * 2) * 120.0 * descentRatio * (1 - descentRatio);
     currentX = descentRatio * x_land + waveX + lonJitter;
@@ -67,26 +87,19 @@ export function getUbicacionValueAtTime(secondsElapsed) {
   const lon = LAUNCH_LON + currentX / X_METERS_PER_DEG;
   const distancia = Math.sqrt(currentX * currentX + currentY * currentY);
 
-  // 3. Velocidad
-  let velocidad = 15.3;
-  if (cycleTime < 10) {
-    velocidad = 5.0 + cycleTime * 1.5;
-  } else if (cycleTime < 60) {
-    velocidad = 20.0 + Math.sin(cycleTime * 0.2) * 3.0;
-  } else if (cycleTime < 110) {
+  // Velocidad
+  let velocidad = 0.0;
+  if (cycleTime >= 3 && cycleTime < 18) {
+    velocidad = 22.0 + Math.sin(cycleTime * 0.2) * 3.0;
+  } else if (cycleTime >= 18 && cycleTime < 42) {
     velocidad = 15.0 + Math.cos(cycleTime * 0.1) * 2.0;
   } else {
-    const stopRatio = (120 - cycleTime) / 10;
-    velocidad = stopRatio * 15.0;
+    velocidad = 0.0;
   }
-  if (velocidad < 0) velocidad = 0;
 
-  // 4. Distancia al Origen (clamped to >= 0)
   const distClamped = Math.max(0, distancia);
-
-  // 5. Satélites y Calidad Señal
-  const satelites = Math.floor(8 + Math.random() * 3); // 8 to 10
-  const calidad = Math.floor(7 + Math.random() * 4); // 7 to 10 bars
+  const satelites = Math.floor(8 + Math.random() * 3);
+  const calidad = Math.floor(7 + Math.random() * 4);
 
   return {
     latitud: parseFloat(lat.toFixed(6)),
@@ -108,7 +121,6 @@ function publishNextPacket() {
   let crcValido = true;
   let data = null;
 
-  // 8% packet loss, 2% CRC corruption
   if (rand < 0.08) {
     received = false;
     crcValido = null;
@@ -120,7 +132,6 @@ function publishNextPacket() {
     const values = getUbicacionValueAtTime(simulatedTimeSecs);
     const now = new Date();
 
-    // Format current date and time in UTC
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toISOString().split('T')[1].substring(0, 8);
 
@@ -174,4 +185,10 @@ export function stopUbicacionMockPublisher() {
     timerId = null;
     console.log('[MOCK PUBLISHER] Stopped GPS simulation.');
   }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    stopUbicacionMockPublisher();
+  });
 }
