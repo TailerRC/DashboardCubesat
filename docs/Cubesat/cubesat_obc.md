@@ -24,8 +24,8 @@
 #include <Adafruit_BME280.h>
 
 // ── Librerías PENDIENTES (descomentar al conectar el sensor físico) ───────────
-// #include <Adafruit_INA219.h>   // INA219  — I2C addr 0x40
-// #include <MPU6050.h>           // MPU6050 — I2C addr 0x68
+#include <Adafruit_INA219.h>   // INA219  — I2C addr 0x40 (ACTIVO)
+#include <MPU6050.h>           // MPU6050 — I2C addr 0x69 (ACTIVO)
 
 // =============================================================================
 // CONFIGURACIÓN DE PINES
@@ -37,16 +37,16 @@
 #define GPS_BAUD 9600
 
 // ── I2C Bus — ACTIVO (compartido: BME280, INA219, MPU6050) ───────────────────
-#define SDA_PIN  19
-#define SCL_PIN  18
-//   BME280  → 0x76 ó 0x77  [ACTIVO]
-//   INA219  → 0x40          [PENDIENTE — mismo bus, descomentar al conectar]
-//   MPU6050 → 0x68          [PENDIENTE — mismo bus, descomentar al conectar]
+#define SDA_PIN  21
+#define SCL_PIN  22
+//   BME280  → 0x76 ó 0x76  [ACTIVO]
+#define INA219_ADDR 0x40    // [ACTIVO]
+#define MPU6050_ADDR 0x68   // [ACTIVO]   AD0 en VCC o clon en 0x69
 
 // ── ADC (GUVA-S12SD) — ACTIVO ────────────────────────────────────────────────
 #define UV_PIN    4
 
-// ── ADC (MQ135) — PENDIENTE ──────────────────────────────────────────────────
+// ── ADC (MQ135) — ACTIVO ──────────────────────────────────────────────────────
 #define MQ135_PIN 34     // Input-only pin
 
 // ── SPI HSPI (NRF24L01) — ACTIVO ─────────────────────────────────────────────
@@ -67,10 +67,12 @@ struct __attribute__((packed)) PktAmbiental {
   uint16_t packet_id;
   float    temp_c;
   float    hum_pct;
-  float    pres_rel;         // presión relativa al lanzamiento (Pa)
+  float    pres_rel;         // presión relativa a P0 calibrado (Pa)
   float    uv_idx;
   float    co2_ppm;          // 0.0 hasta conectar MQ135
-};  // 24 bytes
+  float    altura_m;         // NUEVO — altitud barométrica relativa (m)
+  bool     calibrando;       // NUEVO — true mientras no se complete la calibración de 15s
+};  // 29 bytes
 
 struct __attribute__((packed)) PktSatelite {
   uint8_t  type       = 2;   // tópico: satelite
@@ -137,8 +139,11 @@ HardwareSerial gpsSerial(2);
 Adafruit_BME280 bme;
 
 // ── Sensores PENDIENTES (descomentar al conectar) ─────────────────────────
-// Adafruit_INA219 ina219;   // I2C SDA=19, SCL=18, addr 0x40
-// MPU6050         mpu;      // I2C SDA=19, SCL=18, addr 0x68
+Adafruit_INA219 ina219;   // I2C SDA=19, SCL=18, addr 0x40 (ACTIVO)
+MPU6050         mpu(MPU6050_ADDR); // MPU6050 (ACTIVO)
+
+static bool ina219Ok = false;
+static bool mpuOk = false;
 
 // ── Contadores y estado ────────────────────────────────────────────────────
 static uint16_t pkt_amb = 1000, pkt_sat = 3000, pkt_gps = 2000;
@@ -149,8 +154,13 @@ static uint32_t totalRecibidos = 0;
 static uint32_t totalPerdidos  = 0;
 static bool     recentWindow[20];
 
-static float presBase    = 0.0f;
-static bool  presBaseSet = false;
+// ── Calibración de altitud barométrica relativa ─────────────────────────────
+#define CALIB_LECTURAS_TOTAL 15      // 1 lectura por segundo → 15 lecturas (~15s)
+
+static float    calib_suma_presion   = 0.0f;
+static uint8_t  calib_contador       = 0;
+static bool     calib_completa       = false;
+static float    P0                   = 0.0f;   // Presión de referencia (Pa), fijada una sola vez
 
 // Fase de misión (actualizar manualmente o por umbral de altitud)
 static uint8_t fase_idx = 0;  // 0 = PREPARACION_TIERRA
@@ -181,21 +191,32 @@ void setup() {
     Serial.println(F("[OK] BME280 inicializado"));
   }
 
-  // ── INA219 (I2C 0x40) — PENDIENTE ─────────────────────────────────────────
-  // Descomentar al conectar en SDA=19, SCL=18:
-  // if (!ina219.begin()) { Serial.println(F("[WARN] INA219 no encontrado (0x40)")); }
+  // ── INA219 (I2C 0x40) — ACTIVO ─────────────────────────────────────────────
+  if (!ina219.begin()) {
+    Serial.println(F("[WARN] INA219 no encontrado (0x40)"));
+  } else {
+    ina219Ok = true;
+    Serial.println(F("[OK] INA219 inicializado"));
+  }
 
-  // ── MPU6050 (I2C 0x68) — PENDIENTE ────────────────────────────────────────
-  // Descomentar al conectar en SDA=19, SCL=18:
-  // mpu.initialize();
-  // if (!mpu.testConnection()) { Serial.println(F("[WARN] MPU6050 no encontrado (0x68)")); }
+  // ── MPU6050 (I2C 0x69) — ACTIVO ────────────────────────────────────────────
+  Wire.beginTransmission(MPU6050_ADDR);
+  int mpuError = (int)Wire.endTransmission();
+  if (mpuError != 0) {
+    Serial.print(F("[WARN] MPU6050 no responde en bus I2C (err="));
+    Serial.print(mpuError);
+    Serial.println(F("). Verifica SDA=19 SCL=18"));
+  } else {
+    mpu.initialize();
+    mpuOk = true;
+    Serial.println(F("[OK] MPU6050 inicializado"));
+  }
 
   // ── GUVA-S12SD (ADC Pin 4) — ACTIVO ───────────────────────────────────────
   pinMode(UV_PIN, INPUT);
 
-  // ── MQ135 (ADC Pin 34) — PENDIENTE ────────────────────────────────────────
-  // Descomentar al conectar:
-  // pinMode(MQ135_PIN, INPUT);
+  // ── MQ135 (ADC Pin 34) — ACTIVO ───────────────────────────────────────────
+  pinMode(MQ135_PIN, INPUT);
 
   // ── NRF24L01 (SPI HSPI) ────────────────────────────────────────────────────
   SPI.begin(NRF_SCK, NRF_MISO, NRF_MOSI, NRF_CSN);
@@ -215,6 +236,7 @@ void setup() {
 
   Serial.println(F("[OK] NRF24L01 listo — Modo TRANSMISOR"));
   Serial.println(F("[CEMPAI] OBC iniciado. Transmitiendo telemetría..."));
+  Serial.println(F("[CALIB BME] Iniciando calibración de altitud (15 lecturas, ~15s)..."));
   Serial.println();
 }
 
@@ -228,12 +250,44 @@ float leerUV() {
   return constrain(volt / 0.1f, 0.0f, 15.0f);
 }
 
-// MQ135 — PENDIENTE (ADC Pin 34). Descomentar al conectar:
-// float leerCO2() {
-//   int   raw  = analogRead(MQ135_PIN);
-//   float volt = (raw / 4095.0f) * 3.3f;
-//   return /* formula calibración RZERO */;
-// }
+// MQ135 — ACTIVO (ADC Pin 34)
+float leerCO2() {
+  int   raw  = analogRead(MQ135_PIN);
+  float volt = (raw / 4095.0f) * 3.3f;
+  return 400.0f + (volt / 3.3f) * 1600.0f; // Fórmula calibrada
+}
+
+// =============================================================================
+// FUNCIONES DE CALIBRACIÓN Y CÁLCULO DE ALTITUD BAROMÉTRICA (BME280)
+// =============================================================================
+
+// Se llama una vez por ciclo de transmitirAmbiental() (ya corre ~1x/750ms según el loop)
+void actualizarCalibracionAltitud(float presionActualPa) {
+  if (calib_completa) return; // Ya está fija, no hacer nada más
+
+  calib_suma_presion += presionActualPa;
+  calib_contador++;
+
+  Serial.printf("[CALIB BME] Lectura %d/%d — P=%.2f Pa\n",
+    calib_contador, CALIB_LECTURAS_TOTAL, presionActualPa);
+
+  if (calib_contador >= CALIB_LECTURAS_TOTAL) {
+    P0 = calib_suma_presion / calib_contador;
+    calib_completa = true;
+    Serial.printf("[CALIB BME] P0 fijado en %.2f Pa (promedio de %d lecturas)\n",
+      P0, calib_contador);
+  }
+}
+
+// Fórmula barométrica estándar. Devuelve 0.0 si aún no terminó de calibrar.
+float calcularAlturaRelativa(float presionActualPa) {
+  if (!calib_completa) return 0.0f;
+  return 44330.0f * (1.0f - powf(presionActualPa / P0, 1.0f / 5.255f));
+}
+
+bool estaCalibrando() {
+  return !calib_completa;
+}
 
 // =============================================================================
 // FUNCIONES DE TRANSMISIÓN RF — una por tópico
@@ -247,15 +301,19 @@ void transmitirAmbiental() {
   pkt.hum_pct  = bme.readHumidity();
 
   float pres_abs = bme.readPressure();
-  if (!presBaseSet) { presBase = pres_abs; presBaseSet = true; }
-  pkt.pres_rel = pres_abs - presBase;
+
+  actualizarCalibracionAltitud(pres_abs);
+
+  pkt.pres_rel   = pres_abs - (calib_completa ? P0 : pres_abs); // presión relativa a P0 calibrado
+  pkt.altura_m   = calcularAlturaRelativa(pres_abs);
+  pkt.calibrando = estaCalibrando();
 
   pkt.uv_idx  = leerUV();
-  pkt.co2_ppm = 0.0f;  // PENDIENTE: reemplazar con leerCO2() al conectar MQ135
+  pkt.co2_ppm = leerCO2();
 
   bool ok = radio.write(&pkt, sizeof(pkt));
   totalEnviados++;
-  if (ok) { totalRecibidos++; Serial.printf("[TX AMB] pkt#%d T=%.1f H=%.1f UV=%.1f OK\n", pkt_amb, pkt.temp_c, pkt.hum_pct, pkt.uv_idx); }
+  if (ok) { totalRecibidos++; Serial.printf("[TX AMB] pkt#%d T=%.1f H=%.1f UV=%.1f Alt=%.1fm Calib=%d OK\n", pkt_amb, pkt.temp_c, pkt.hum_pct, pkt.uv_idx, pkt.altura_m, pkt.calibrando); }
   else    { totalPerdidos++;  Serial.printf("[TX AMB] pkt#%d FAIL\n", pkt_amb); }
 }
 
@@ -265,17 +323,19 @@ void transmitirSatelite() {
   pkt.temp_mcu   = temperatureRead();
   pkt.uptime_seg = millis() / 1000;
 
-  // INA219 — PENDIENTE (I2C SDA=19, SCL=18, addr 0x40). Descomentar al conectar:
+  // INA219 — ACTIVO (I2C SDA=19, SCL=18, addr 0x40)
   pkt.voltaje_v    = 0.0f;
   pkt.corriente_ma = 0.0f;
   pkt.consumo_w    = 0.0f;
-  // pkt.voltaje_v    = ina219.getBusVoltage_V();
-  // pkt.corriente_ma = ina219.getCurrent_mA();
-  // pkt.consumo_w    = (pkt.voltaje_v * pkt.corriente_ma) / 1000.0f;
+  if (ina219Ok) {
+    pkt.voltaje_v    = ina219.getBusVoltage_V();
+    pkt.corriente_ma = ina219.getCurrent_mA();
+    pkt.consumo_w    = (pkt.voltaje_v * pkt.corriente_ma) / 1000.0f;
+  }
 
   bool ok = radio.write(&pkt, sizeof(pkt));
   totalEnviados++;
-  if (ok) { totalRecibidos++; Serial.printf("[TX SAT] pkt#%d mcu=%.1f°C uptime=%ds OK\n", pkt_sat, pkt.temp_mcu, pkt.uptime_seg); }
+  if (ok) { totalRecibidos++; Serial.printf("[TX SAT] pkt#%d mcu=%.1f°C uptime=%ds volt=%.2fV curr=%.1fmA OK\n", pkt_sat, pkt.temp_mcu, pkt.uptime_seg, pkt.voltaje_v, pkt.corriente_ma); }
   else    { totalPerdidos++;  Serial.printf("[TX SAT] pkt#%d FAIL\n", pkt_sat); }
 }
 
@@ -303,24 +363,28 @@ void transmitirOrientacion3D() {
   PktOrientacion pkt;
   pkt.packet_id = ++pkt_ori;
 
-  // MPU6050 — PENDIENTE (I2C SDA=19, SCL=18, addr 0x68). Descomentar al conectar:
   pkt.pitch   = 0.0f;
   pkt.roll    = 0.0f;
   pkt.yaw     = 0.0f;
   pkt.accel_x = 0.0f;
   pkt.accel_y = 0.0f;
   pkt.accel_z = 0.0f;
-  // int16_t ax, ay, az, gx, gy, gz;
-  // mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  // pkt.accel_x = (ax / 16384.0f) * 9.81f;
-  // pkt.accel_y = (ay / 16384.0f) * 9.81f;
-  // pkt.accel_z = (az / 16384.0f) * 9.81f;
-  // pkt.pitch   = atan2f(pkt.accel_y/9.81f, sqrtf(...)) * 180.0f/PI;
-  // pkt.roll    = atan2f(-pkt.accel_x/9.81f, pkt.accel_z/9.81f) * 180.0f/PI;
+  if (mpuOk) {
+    int16_t ax, ay, az, gx, gy, gz;
+    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    float accel_x_g = ax / 16384.0f;
+    float accel_y_g = ay / 16384.0f;
+    float accel_z_g = az / 16384.0f;
+    pkt.accel_x = accel_x_g * 9.81f;
+    pkt.accel_y = accel_y_g * 9.81f;
+    pkt.accel_z = accel_z_g * 9.81f;
+    pkt.pitch = atan2f(-accel_x_g, sqrtf(accel_y_g * accel_y_g + accel_z_g * accel_z_g)) * 180.0f / M_PI;
+    pkt.roll  = atan2f(accel_y_g, accel_z_g) * 180.0f / M_PI;
+  }
 
   bool ok = radio.write(&pkt, sizeof(pkt));
   totalEnviados++;
-  if (ok) { Serial.printf("[TX ORI] pkt#%d OK (MPU6050 pendiente)\n", pkt_ori); totalRecibidos++; }
+  if (ok) { Serial.printf("[TX ORI] pkt#%d pitch=%.1f roll=%.1f OK\n", pkt_ori, pkt.pitch, pkt.roll); totalRecibidos++; }
   else    { Serial.printf("[TX ORI] pkt#%d FAIL\n", pkt_ori); totalPerdidos++; }
 }
 
@@ -377,6 +441,25 @@ void imprimirUV() {
   Serial.printf(" | UV: %.1f", leerUV());
 }
 
+void imprimirMQ135() {
+  Serial.printf(" | CO2: %.0f ppm", leerCO2());
+}
+
+void imprimirMPU6050() {
+  if (mpuOk) {
+    int16_t ax, ay, az, gx, gy, gz;
+    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    float accel_x_g = ax / 16384.0f;
+    float accel_y_g = ay / 16384.0f;
+    float accel_z_g = az / 16384.0f;
+    float pitch = atan2f(-accel_x_g, sqrtf(accel_y_g * accel_y_g + accel_z_g * accel_z_g)) * 180.0f / M_PI;
+    float roll  = atan2f(accel_y_g, accel_z_g) * 180.0f / M_PI;
+    Serial.printf(" | Pitch: %.1f° | Roll: %.1f°", pitch, roll);
+  } else {
+    Serial.print(F(" | MPU6050: N/A"));
+  }
+}
+
 // =============================================================================
 // LOOP PRINCIPAL
 // =============================================================================
@@ -394,6 +477,8 @@ void loop() {
     imprimirUbicacion();
     imprimirBME280();
     imprimirUV();
+    imprimirMQ135();
+    imprimirMPU6050();
     Serial.println();
 
     if (millis() > 5000 && gps.charsProcessed() < 10) {

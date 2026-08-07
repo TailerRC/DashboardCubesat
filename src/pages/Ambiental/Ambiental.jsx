@@ -235,7 +235,7 @@ const SENSOR_META = {
     color: '#ff9800'
   },
   humedad_pct: {
-    title: 'HUMEDAD RELATIVA',
+    title: 'HUMEDAD',
     icon: 'fa-solid fa-droplet',
     unit: '%RH',
     color: '#03a9f4'

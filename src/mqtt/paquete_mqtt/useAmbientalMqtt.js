@@ -13,6 +13,37 @@ const KEY_MAP = {
   presion_pa: 'pres'
 };
 
+// Parámetros de referencia en tierra para calibración de humedad
+const T0 = 20.5;     // Temperatura de referencia inicial en tierra (°C)
+const P0 = 101325.0; // Presión atmosférica estándar en tierra (Pa)
+const RH0 = 45.0;    // Humedad de referencia inicial (%)
+
+// Función para calcular la presión de vapor de saturación e_s (Buck equation) en hPa
+function getSaturationVaporPressure(T) {
+  return 6.1121 * Math.exp((18.678 - T / 234.5) * (T / (257.14 + T)));
+}
+
+// Estimar la humedad relativa a partir de la temperatura y la presión relativa
+function estimateHumidity(temp, relativePres) {
+  // Convertir e_s a Pascales para que sea consistente con la presión en Pa
+  const es_T0_Pa = getSaturationVaporPressure(T0) * 100;
+  
+  // Mixing ratio de referencia (w)
+  const e0 = (RH0 / 100) * es_T0_Pa;
+  const w = 0.622 * (e0 / (P0 - e0));
+
+  // Presión absoluta actual P(t) = P0 + P_rel(t)
+  const P_t = P0 + relativePres;
+  const e_t = (w * P_t) / (0.622 + w);
+  const es_t_Pa = getSaturationVaporPressure(temp) * 100;
+
+  const RH_t = 100 * (e_t / es_t_Pa);
+  
+  // Clampear el resultado entre 0% y 100%
+  return Math.max(0, Math.min(100, RH_t));
+}
+
+
 export function useAmbientalMqtt() {
   const [sensors, setSensors] = useState(() => {
     const initial = {};
@@ -122,7 +153,26 @@ export function useAmbientalMqtt() {
           let stale = prevSensor.stale;
 
           if (!isPacketLostOrCorrupt) {
-            const sensorVal = packet.data[key];
+            let sensorVal = packet.data[key];
+
+            // Si es humedad_pct, la estimamos a partir de temperatura y presión del mismo paquete
+            if (key === 'humedad_pct') {
+              const tempObj = packet.data['temperatura_c'];
+              const presObj = packet.data['presion_pa'];
+              if (tempObj && presObj) {
+                const tVal = (typeof tempObj === 'object' && tempObj !== null) ? tempObj.v : tempObj;
+                const pVal = (typeof presObj === 'object' && presObj !== null) ? presObj.v : presObj;
+                if (tVal !== undefined && tVal !== null && pVal !== undefined && pVal !== null) {
+                  const calculatedHum = estimateHumidity(Number(tVal), Number(pVal));
+                  sensorVal = {
+                    v: calculatedHum,
+                    hace_seg: (typeof tempObj === 'object' && tempObj !== null && tempObj.hace_seg !== undefined) ? tempObj.hace_seg : 0.0,
+                    umbral_alerta: SENSOR_CONFIGS.hum?.threshold ?? 85
+                  };
+                }
+              }
+            }
+
             if (sensorVal !== undefined && sensorVal !== null) {
               const rawV = (typeof sensorVal === 'object' && sensorVal !== null) ? sensorVal.v : sensorVal;
               if (rawV !== null && rawV !== undefined && !isNaN(Number(rawV))) {

@@ -324,7 +324,7 @@ Los valores de cada campo dentro de `data` siguen este sub-esquema:
     "canal_nrf24":          { "v": 1 },
     "calidad_enlace_pct":   { "v": 94.5,  "hace_seg": 0.0 },
     "calidad_label":        "Buena",
-    "baudios_debug":        { "v": 9600 },
+    "baudios_debug":        { "v": 115200 },
     "tasa_aire_nrf24_kbps": { "v": 2000 },
     "ultimo_pkt_timestamp": "22:47:13",
     "log_entry": {
@@ -516,11 +516,14 @@ void leerTodosLosSensores() {
   if (gps.location.isValid()) {
     cache.latitud       = gps.location.lat();
     cache.longitud      = gps.location.lng();
-    cache.altitud_gps   = gps.altitude.meters();
-    cache.velocidad_kmh = gps.speed.kmph();
-    cache.satelites     = gps.satellites.value();
-    cache.hdop          = gps.hdop.hdop();
+  } else {
+    cache.latitud       = 0.0;
+    cache.longitud      = 0.0;
   }
+  cache.altitud_gps   = gps.altitude.isValid() ? gps.altitude.meters() : 0.0f;
+  cache.velocidad_kmh = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
+  cache.satelites     = gps.satellites.isValid() ? gps.satellites.value() : 0;
+  cache.hdop          = gps.hdop.isValid() ? gps.hdop.hdop() : 99.9f;
 
   // MCU Temp
   cache.temp_mcu   = temperatureRead();
@@ -593,7 +596,6 @@ void publish_satelite() {
 }
 
 void publish_ubicacion() {
-  if (cache.satelites < 4) return;
   packetId_gps++;
 
   char fecha[12], hora[10];
@@ -767,7 +769,7 @@ void publish_comunicacion(bool paqueteRecibido, bool crcOk) {
   data["calidad_enlace_pct"]["v"]   = roundf(calidad_pct * 10) / 10.0f;
   data["calidad_enlace_pct"]["hace_seg"] = 0.0;
   data["calidad_label"]             = calidad_label;
-  data["baudios_debug"]["v"]        = 9600;
+  data["baudios_debug"]["v"]        = 115200;
   data["tasa_aire_nrf24_kbps"]["v"] = 2000;
   data["ultimo_pkt_timestamp"]      = ts;
 
@@ -805,7 +807,7 @@ void reconnect_mqtt() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   gpsSerial.begin(9600, SERIAL_8N1, 16, 17);
 
   Wire.begin();

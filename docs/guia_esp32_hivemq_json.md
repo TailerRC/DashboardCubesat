@@ -128,7 +128,7 @@ float mq135_get_ppm() {
 
 // ── Inicialización ───────────────────────────────────────────────────────────
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   gpsSerial.begin(9600, SERIAL_8N1, 16, 17);
 
   Wire.begin();
@@ -278,7 +278,6 @@ void publicarUbicacion() {
   // Leer tramas NMEA pendientes en el buffer UART
   while (gpsSerial.available()) gps.encode(gpsSerial.read());
 
-  if (!gps.location.isValid()) return;  // Sin fix GPS válido — no publicar
   pkt_gps++;
 
   char fecha[12], hora[10];
@@ -297,21 +296,21 @@ void publicarUbicacion() {
   doc["crc_valido"] = true;
 
   JsonObject data = doc.createNestedObject("data");
-  data["latitud"]["v"]            = gps.location.lat();
+  data["latitud"]["v"]            = gps.location.isValid() ? gps.location.lat() : 0.0;
   data["latitud"]["hace_seg"]     = 0.0;
-  data["longitud"]["v"]           = gps.location.lng();
+  data["longitud"]["v"]           = gps.location.isValid() ? gps.location.lng() : 0.0;
   data["longitud"]["hace_seg"]    = 0.0;
-  data["altitud_gps"]["v"]        = round(gps.altitude.meters() * 10) / 10.0;
+  data["altitud_gps"]["v"]        = gps.altitude.isValid() ? (round(gps.altitude.meters() * 10) / 10.0) : 0.0;
   data["altitud_gps"]["hace_seg"] = 0.0;
-  data["velocidad_kmh"]["v"]      = round(gps.speed.kmph() * 10) / 10.0;
+  data["velocidad_kmh"]["v"]      = gps.speed.isValid() ? (round(gps.speed.kmph() * 10) / 10.0) : 0.0;
   data["velocidad_kmh"]["hace_seg"] = 0.0;
   data["velocidad_vertical"]["v"] = 0.0;   // NEO-7M no entrega vel. vertical directa
   data["velocidad_vertical"]["hace_seg"] = 0.0;
-  data["satelites"]["v"]          = gps.satellites.value();
+  data["satelites"]["v"]          = gps.satellites.isValid() ? gps.satellites.value() : 0;
   data["satelites"]["hace_seg"]   = 0.0;
-  data["hdop"]["v"]               = gps.hdop.hdop();
+  data["hdop"]["v"]               = gps.hdop.isValid() ? gps.hdop.hdop() : 99.9;
   data["hdop"]["hace_seg"]        = 0.0;
-  data["calidad_senal"]["v"]      = min((uint32_t)10, gps.satellites.value());
+  data["calidad_senal"]["v"]      = gps.satellites.isValid() ? min((uint32_t)10, gps.satellites.value()) : 0;
   data["calidad_senal"]["hace_seg"] = 0.0;
   data["distancia_origen"]["v"]   = 0.0;   // Implementar con haversine si se requiere
   data["distancia_origen"]["hace_seg"] = 0.0;
@@ -325,8 +324,12 @@ void publicarUbicacion() {
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_UBICACION, buffer, bytes);
-  Serial.printf("[TX GPS] pkt#%d lat=%.6f lon=%.6f alt=%.1fm\n",
-    pkt_gps, gps.location.lat(), gps.location.lng(), gps.altitude.meters());
+  if (gps.location.isValid()) {
+    Serial.printf("[TX GPS] pkt#%d lat=%.6f lon=%.6f alt=%.1fm\n",
+      pkt_gps, gps.location.lat(), gps.location.lng(), gps.altitude.meters());
+  } else {
+    Serial.printf("[TX GPS] pkt#%d NO FIX (sats=%d)\n", pkt_gps, gps.satellites.isValid() ? gps.satellites.value() : 0);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -554,7 +557,7 @@ void publicarComunicacion(bool paqueteRecibido, bool crcOk) {
   data["calidad_enlace_pct"]["v"]   = round(calidad_pct * 10) / 10.0;
   data["calidad_enlace_pct"]["hace_seg"] = 0.0;
   data["calidad_label"]             = calidad_label;
-  data["baudios_debug"]["v"]        = 9600;
+  data["baudios_debug"]["v"]        = 115200;
   data["tasa_aire_nrf24_kbps"]["v"] = 2000;
   data["ultimo_pkt_timestamp"]      = ts;
 

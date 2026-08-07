@@ -144,11 +144,15 @@ static uint32_t gw_recibidos = 0;
 static uint32_t gw_perdidos  = 0;
 static bool     recentWindow[20];
 
+// Estado de orientación cacheado para el tópico mision
+static float ultimoPitch = 0.0f;
+static float ultimoRoll  = 0.0f;
+
 // =============================================================================
 // SETUP
 // =============================================================================
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(1000);
 
   Serial.println(F("=============================================="));
@@ -273,7 +277,7 @@ void publicarSatelite(PktSatelite& p) {
   data["memoria_flash_ok"]["hace_seg"]= 0.0;
 
   JsonObject sens = data.createNestedObject("sensores_activos");
-  sens["v"] = 3; sens["total"] = 7; sens["hace_seg"] = 0.0;
+  sens["v"] = 7; sens["total"] = 7; sens["hace_seg"] = 0.0;
 
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
@@ -321,6 +325,9 @@ void publicarUbicacion(PktUbicacion& p) {
 
 // ── Tópico 4: orientacion3d ───────────────────────────────────────────────────
 void publicarOrientacion3D(PktOrientacion& p) {
+  ultimoPitch = p.pitch;
+  ultimoRoll  = p.roll;
+
   StaticJsonDocument<1024> doc;
   doc["topic"]      = TOPIC_ORIENTACION;
   doc["packet_id"]  = p.packet_id;
@@ -330,15 +337,15 @@ void publicarOrientacion3D(PktOrientacion& p) {
   JsonObject data = doc.createNestedObject("data");
   data["cabeceo_deg"]["v"]  = round(p.pitch * 10) / 10.0; data["cabeceo_deg"]["hace_seg"]  = 0.0;
   data["balanceo_deg"]["v"] = round(p.roll  * 10) / 10.0; data["balanceo_deg"]["hace_seg"] = 0.0;
-  data["accel_x"]["v"]      = round(p.accel_x * 10) / 10.0; data["accel_x"]["hace_seg"]    = 0.0;
-  data["accel_y"]["v"]      = round(p.accel_y * 10) / 10.0; data["accel_y"]["hace_seg"]    = 0.0;
-  data["accel_z"]["v"]      = round(p.accel_z * 10) / 10.0; data["accel_z"]["hace_seg"]    = 0.0;
+  data["accel_x"]["v"]      = round(p.accel_x * 100) / 100.0; data["accel_x"]["hace_seg"]    = 0.0;
+  data["accel_y"]["v"]      = round(p.accel_y * 100) / 100.0; data["accel_y"]["hace_seg"]    = 0.0;
+  data["accel_z"]["v"]      = round(p.accel_z * 100) / 100.0; data["accel_z"]["hace_seg"]    = 0.0;
   data["gyro_x_dps"]["v"]   = 0.0; data["gyro_x_dps"]["hace_seg"]  = 0.0;
   data["gyro_y_dps"]["v"]   = 0.0; data["gyro_y_dps"]["hace_seg"]  = 0.0;
   data["gyro_z_dps"]["v"]   = 0.0; data["gyro_z_dps"]["hace_seg"]  = 0.0;
-  data["inercial_x"]["v"]   = 0.0; data["inercial_x"]["hace_seg"]  = 0.0;
-  data["inercial_y"]["v"]   = 0.0; data["inercial_y"]["hace_seg"]  = 0.0;
-  data["inercial_z"]["v"]   = 0.0; data["inercial_z"]["hace_seg"]  = 0.0;
+  data["inercial_x"]["v"]   = round(p.accel_x * 100) / 100.0; data["inercial_x"]["hace_seg"]  = 0.0;
+  data["inercial_y"]["v"]   = round(p.accel_y * 100) / 100.0; data["inercial_y"]["hace_seg"]  = 0.0;
+  data["inercial_z"]["v"]   = round(p.accel_z * 100) / 100.0; data["inercial_z"]["hace_seg"]  = 0.0;
 
   JsonObject yaw = data.createNestedObject("giro_yaw_deg");
   yaw["v"] = round(p.yaw * 10) / 10.0; yaw["hace_seg"] = 0.0; yaw["drift_acumulado"] = 0.0;
@@ -372,8 +379,8 @@ void publicarMision(PktMision& p) {
   data["velocidad_vertical_ms"]["hace_seg"] = 0.0;
   data["t_vuelo_seg"]["v"]           = p.t_vuelo_seg;
   data["t_vuelo_seg"]["hace_seg"]    = 0.0;
-  data["cabeceo_deg"]["v"]           = 0.0; data["cabeceo_deg"]["hace_seg"]  = 0.0;
-  data["balanceo_deg"]["v"]          = 0.0; data["balanceo_deg"]["hace_seg"] = 0.0;
+  data["cabeceo_deg"]["v"]           = round(ultimoPitch * 10) / 10.0; data["cabeceo_deg"]["hace_seg"]  = 0.0;
+  data["balanceo_deg"]["v"]          = round(ultimoRoll * 10) / 10.0;  data["balanceo_deg"]["hace_seg"] = 0.0;
 
   JsonObject yaw = data.createNestedObject("giro_yaw_deg");
   yaw["v"] = 0.0; yaw["hace_seg"] = 0.0; yaw["drift_acumulado"] = 0.0;
@@ -425,7 +432,7 @@ void publicarComunicacion(PktComunicacion& p, bool recibidoOk) {
   data["calidad_enlace_pct"]["v"]      = round(p.calidad_pct * 10) / 10.0;
   data["calidad_enlace_pct"]["hace_seg"]= 0.0;
   data["calidad_label"]                = calidad_label;
-  data["baudios_debug"]["v"]           = 9600;
+  data["baudios_debug"]["v"]           = 115200;
   data["tasa_aire_nrf24_kbps"]["v"]    = 2000;
   data["ultimo_pkt_timestamp"]         = ts;
 

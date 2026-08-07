@@ -174,7 +174,7 @@ function publishNextPacket() {
     co2Val = getSensorValueAtTime('co2', simulatedTimeSecs);
     tempVal = getSensorValueAtTime('temp', simulatedTimeSecs);
     uvVal = getSensorValueAtTime('uv', simulatedTimeSecs);
-    humVal = getSensorValueAtTime('hum', simulatedTimeSecs);
+    humVal = 0.0; // Sensor BME280 roto: envía siempre 0% de humedad
     
     // Base pressure value from flight cycle
     const basePres = getSensorValueAtTime('pres', simulatedTimeSecs);
