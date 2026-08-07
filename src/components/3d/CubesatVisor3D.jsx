@@ -1,96 +1,123 @@
 import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 
-// Función auxiliar para dibujar una cuadrícula de panel solar con líneas ortogonales puras (sin diagonales)
-function createSolarGrid(w, h, cols, rows) {
-  const points = [];
+// Auxiliary function to create the green printed diagonal truss lattice side panel
+function createLatticePanel(S, thickness, greenMat) {
+  const shape = new THREE.Shape();
+  const half = S / 2;
 
-  // Líneas verticales
-  for (let i = 0; i <= cols; i++) {
-    const x = -w / 2 + (i / cols) * w;
-    points.push(new THREE.Vector3(x, -h / 2, 0));
-    points.push(new THREE.Vector3(x, h / 2, 0));
+  // Outer square contour
+  shape.moveTo(-half, -half);
+  shape.lineTo(half, -half);
+  shape.lineTo(half, half);
+  shape.lineTo(-half, half);
+  shape.closePath();
+
+  // Center circular hole
+  const centerHole = new THREE.Path();
+  centerHole.absarc(0, 0, 0.45, 0, Math.PI * 2, true);
+  shape.holes.push(centerHole);
+
+  // 8 triangular beveled windows matching the printed green truss frame
+  const rim = 0.55;
+  const strut = 0.35;
+  const rHub = 0.85;
+
+  for (let i = 0; i < 8; i++) {
+    const r_in = rHub + 0.15;
+    const r_out = S / 2 - rim;
+
+    const A1 = i * Math.PI / 4;
+    const A2 = (i + 1) * Math.PI / 4;
+    const A_mid = (A1 + A2) / 2;
+
+    // V1 (inner vertex near circular hub)
+    const v1 = new THREE.Vector2(r_in * Math.cos(A_mid), r_in * Math.sin(A_mid));
+
+    // V2 (outer corner near ray 1)
+    const perp1X = -Math.sin(A1);
+    const perp1Y = Math.cos(A1);
+    const p1 = new THREE.Vector2(r_out * Math.cos(A1), r_out * Math.sin(A1));
+    const v2 = new THREE.Vector2(
+      p1.x + perp1X * (strut / 2),
+      p1.y + perp1Y * (strut / 2)
+    );
+
+    // V3 (outer corner near ray 2)
+    const perp2X = Math.sin(A2);
+    const perp2Y = -Math.cos(A2);
+    const p2 = new THREE.Vector2(r_out * Math.cos(A2), r_out * Math.sin(A2));
+    const v3 = new THREE.Vector2(
+      p2.x + perp2X * (strut / 2),
+      p2.y + perp2Y * (strut / 2)
+    );
+
+    const triPath = new THREE.Path();
+    triPath.moveTo(v1.x, v1.y);
+    triPath.lineTo(v2.x, v2.y);
+    triPath.lineTo(v3.x, v3.y);
+    triPath.closePath();
+    shape.holes.push(triPath);
   }
 
-  // Líneas horizontales
-  for (let j = 0; j <= rows; j++) {
-    const y = -h / 2 + (j / rows) * h;
-    points.push(new THREE.Vector3(-w / 2, y, 0));
-    points.push(new THREE.Vector3(w / 2, y, 0));
-  }
+  const extrudeSettings = {
+    depth: thickness,
+    bevelEnabled: true,
+    bevelThickness: 0.05,
+    bevelSize: 0.03,
+    bevelSegments: 3,
+    curveSegments: 24
+  };
 
-  const geom = new THREE.BufferGeometry().setFromPoints(points);
-  return geom;
+  const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geom.center();
+
+  const mesh = new THREE.Mesh(geom, greenMat);
+  return mesh;
 }
 
-// ── Función auxiliar para construir el modelo 3D con Puerta Abierta y Componentes Reales ──
 function createRealisticCubeSat() {
   const cubesatGroup = new THREE.Group();
 
-  // Aluminio gris metálico — raíles CNC y marcos
-  const aluminumMat = new THREE.MeshPhysicalMaterial({
-    color: 0x8a9099,
-    metalness: 0.65,
-    roughness: 0.30,
-    clearcoat: 0.7,
-    clearcoatRoughness: 0.12
-  });
-
-  // Aluminio oscuro anodizado — patas y conectores
-  const darkAluminumMat = new THREE.MeshPhysicalMaterial({
-    color: 0x3a3d45,
-    metalness: 0.6,
+  // Vibrant green printed filament material for the side panels
+  const greenLatticeMat = new THREE.MeshPhysicalMaterial({
+    color: 0x22c55e, // Apple/filament green
     roughness: 0.25,
-    clearcoat: 0.5,
+    metalness: 0.05,
+    clearcoat: 0.3,
     clearcoatRoughness: 0.15
   });
 
-  // Latón dorado pulido — varillas de soporte
-  const brassMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe8a020,
-    metalness: 0.75,
-    roughness: 0.12,
-    clearcoat: 0.8,
-    clearcoatRoughness: 0.06
-  });
-
-  // PCB verde esmeralda lacado
-  const pcbMat = new THREE.MeshPhysicalMaterial({
-    color: 0x1a6b4a,
-    roughness: 0.30,
+  // Matte black corner rails
+  const blackCornerMat = new THREE.MeshPhysicalMaterial({
+    color: 0x18181b,
+    roughness: 0.4,
     metalness: 0.15,
-    clearcoat: 0.5,
-    clearcoatRoughness: 0.25,
-    emissive: 0x0a3322,
-    emissiveIntensity: 0.2
+    clearcoat: 0.1
   });
 
-  // Panel solar azul profundo con líneas fotovoltaicas
-  const solarPanelMat = new THREE.MeshPhysicalMaterial({
-    color: 0x0a1e40,
-    metalness: 0.5,
-    roughness: 0.15,
-    clearcoat: 0.9,
-    clearcoatRoughness: 0.08,
-    emissive: 0x003878,
-    emissiveIntensity: 0.20
+  // Brushed aluminum grey for top, bottom, and internal compartment
+  const greyMetalMat = new THREE.MeshPhysicalMaterial({
+    color: 0x9ca3af,
+    metalness: 0.6,
+    roughness: 0.25,
+    clearcoat: 0.5
   });
 
-  // Tornillos de acero inoxidable
+  // Shiny silver screw caps
   const screwMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe8ecf2,
-    metalness: 0.7,
-    roughness: 0.08,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.04
+    color: 0xe5e7eb,
+    metalness: 0.9,
+    roughness: 0.1,
+    clearcoat: 0.8
   });
 
-  // 1. RAÍLES DE ESQUINA CUBESAT 1U (Cubo perfecto de 8x8x8 para medir 1m proporcional)
   const railHeight = 8.0;
   const size = 8.0;
   const halfS = size / 2;
 
-  const railGeom = new THREE.BoxGeometry(0.5, railHeight, 0.5);
+  // 1. BLACK CORNER RAILS & CORNER FOOT BRACKETS
+  const railGeom = new THREE.BoxGeometry(0.4, railHeight, 0.4);
   const railPositions = [
     [-halfS, 0, -halfS],
     [halfS, 0, -halfS],
@@ -99,37 +126,105 @@ function createRealisticCubeSat() {
   ];
 
   railPositions.forEach(([rx, ry, rz]) => {
-    const rail = new THREE.Mesh(railGeom, aluminumMat);
+    const rail = new THREE.Mesh(railGeom, blackCornerMat);
     rail.position.set(rx, ry, rz);
     cubesatGroup.add(rail);
 
-    const footGeom = new THREE.BoxGeometry(0.7, 0.4, 0.7);
-    const footTop = new THREE.Mesh(footGeom, darkAluminumMat);
+    // Corner caps
+    const footGeom = new THREE.BoxGeometry(0.6, 0.4, 0.6);
+    const footTop = new THREE.Mesh(footGeom, blackCornerMat);
     footTop.position.set(rx, railHeight / 2 + 0.2, rz);
     cubesatGroup.add(footTop);
 
-    const footBottom = new THREE.Mesh(footGeom, darkAluminumMat);
+    const footBottom = new THREE.Mesh(footGeom, blackCornerMat);
     footBottom.position.set(rx, -railHeight / 2 - 0.2, rz);
     cubesatGroup.add(footBottom);
   });
 
-  // 2. MARCOS SUPERIOR E INFERIOR CNC
-  const topBottomFrameGeom = new THREE.BoxGeometry(size + 0.2, 0.3, size + 0.2);
-  const topFrame = new THREE.Mesh(topBottomFrameGeom, aluminumMat);
-  topFrame.position.set(0, railHeight / 2, 0);
-  cubesatGroup.add(topFrame);
+  // 2. SOLID GREY TOP PLATE
+  const topPlateGeom = new THREE.BoxGeometry(size - 0.2, 0.15, size - 0.2);
+  const topPlate = new THREE.Mesh(topPlateGeom, greyMetalMat);
+  topPlate.position.set(0, railHeight / 2, 0);
+  cubesatGroup.add(topPlate);
 
-  const bottomFrame = new THREE.Mesh(topBottomFrameGeom, aluminumMat);
-  bottomFrame.position.set(0, -railHeight / 2, 0);
-  cubesatGroup.add(bottomFrame);
+  // 2b. GREEN BOTTOM PLATE WITH A SQUARE CORNER HOLE FOR THE CAMERA
+  const plateSize = size - 0.2;
+  const hP = plateSize / 2;
+  const bottomPlateShape = new THREE.Shape();
+  bottomPlateShape.moveTo(-hP, -hP);
+  bottomPlateShape.lineTo(hP, -hP);
+  bottomPlateShape.lineTo(hP, hP);
+  bottomPlateShape.lineTo(-hP, hP);
+  bottomPlateShape.closePath();
 
-  // 3. PANELES SOLARES LATERALES Y TRASERO (CARAS CERRADAS)
-  const sidePlateGeom = new THREE.BoxGeometry(size - 0.2, railHeight - 0.6, 0.15);
+  // Add square hole in the front-left corner (in 2D shape coords)
+  // Corner at X = -2.7, Y = 2.7 (representing Z in 3D)
+  const holeSize = 1.0;
+  const holeHalf = holeSize / 2;
+  const holeX = -2.6;
+  const holeY = 2.6;
+  const cameraHole = new THREE.Path();
+  cameraHole.moveTo(holeX - holeHalf, holeY - holeHalf);
+  cameraHole.lineTo(holeX + holeHalf, holeY - holeHalf);
+  cameraHole.lineTo(holeX + holeHalf, holeY + holeHalf);
+  cameraHole.lineTo(holeX - holeHalf, holeY + holeHalf);
+  cameraHole.closePath();
+  bottomPlateShape.holes.push(cameraHole);
+
+  const bottomPlateExtSettings = {
+    depth: 0.15,
+    bevelEnabled: true,
+    bevelThickness: 0.02,
+    bevelSize: 0.02,
+    bevelSegments: 2,
+    curveSegments: 16
+  };
+
+  const bottomPlateGeom = new THREE.ExtrudeGeometry(bottomPlateShape, bottomPlateExtSettings);
+  bottomPlateGeom.center();
+  
+  const bottomPlate = new THREE.Mesh(bottomPlateGeom, greenLatticeMat);
+  // Lay it flat horizontally (rotate X) and place it at the bottom
+  bottomPlate.rotation.x = Math.PI / 2;
+  bottomPlate.position.set(0, -railHeight / 2, 0);
+  cubesatGroup.add(bottomPlate);
+
+  // 2c. TINY CAMERA MODULE POINTING DOWNWARDS
+  const cameraGroup = new THREE.Group();
+  cameraGroup.position.set(holeX, -railHeight / 2, holeY); // Align with extruded hole Y->Z
+
+  // Camera main body box (placed slightly inside the cubesat)
+  const camBodyGeom = new THREE.BoxGeometry(0.8, 0.6, 0.8);
+  const camBodyMat = new THREE.MeshPhysicalMaterial({ color: 0x1f2937, roughness: 0.5 });
+  const camBody = new THREE.Mesh(camBodyGeom, camBodyMat);
+  camBody.position.y = 0.3;
+  cameraGroup.add(camBody);
+
+  // Brass/gold lens ring pointing downwards
+  const lensRingGeom = new THREE.CylinderGeometry(0.24, 0.24, 0.25, 12);
+  const brassCameraMat = new THREE.MeshPhysicalMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.2 });
+  const lensRing = new THREE.Mesh(lensRingGeom, brassCameraMat);
+  lensRing.position.y = -0.05;
+  cameraGroup.add(lensRing);
+
+  // Dark glass lens element
+  const lensGlassGeom = new THREE.CylinderGeometry(0.18, 0.18, 0.05, 12);
+  const lensGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x020617, roughness: 0.05, transmission: 0.3, thickness: 0.1 });
+  const lensGlass = new THREE.Mesh(lensGlassGeom, lensGlassMat);
+  lensGlass.position.y = -0.15;
+  cameraGroup.add(lensGlass);
+
+  cubesatGroup.add(cameraGroup);
+
+  // 3. 4 CLOSED GREEN LATTICE SIDE PANELS (PEER THROUGH INTERIOR)
+  const panelWidth = size - 0.3;
+  const panelHeight = railHeight - 0.5;
 
   const panelOffsets = [
-    { pos: [0, 0, -halfS - 0.08], rot: [0, Math.PI, 0] },
-    { pos: [-halfS - 0.08, 0, 0], rot: [0, -Math.PI / 2, 0] },
-    { pos: [halfS + 0.08, 0, 0], rot: [0, Math.PI / 2, 0] }
+    { pos: [0, 0, -halfS - 0.02], rot: [0, Math.PI, 0] },
+    { pos: [-halfS - 0.02, 0, 0], rot: [0, -Math.PI / 2, 0] },
+    { pos: [halfS + 0.02, 0, 0], rot: [0, Math.PI / 2, 0] },
+    { pos: [0, 0, halfS + 0.02], rot: [0, 0, 0] }
   ];
 
   panelOffsets.forEach(({ pos, rot }) => {
@@ -137,27 +232,18 @@ function createRealisticCubeSat() {
     faceGroup.position.set(...pos);
     faceGroup.rotation.set(...rot);
 
-    const frame = new THREE.Mesh(sidePlateGeom, aluminumMat);
-    faceGroup.add(frame);
+    // Green diagonal truss lattice panel (pass exactly 3 parameters to avoid parameter mismatch)
+    const latticePanel = createLatticePanel(panelWidth, 0.15, greenLatticeMat);
+    faceGroup.add(latticePanel);
 
-    const solarSurfaceGeom = new THREE.BoxGeometry(size - 1.2, railHeight - 1.4, 0.05);
-    const solarMesh = new THREE.Mesh(solarSurfaceGeom, solarPanelMat);
-    solarMesh.position.z = 0.08;
-    faceGroup.add(solarMesh);
-
-    const gridGeo = createSolarGrid(size - 1.4, railHeight - 1.6, 3, 5);
-    const gridMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 });
-    const gridLines = new THREE.LineSegments(gridGeo, gridMat);
-    gridLines.position.z = 0.12;
-    faceGroup.add(gridLines);
-
-    // Tornillos M2 en las esquinas
-    const screwGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.1, 8);
+    // Silver corner screws on panels
+    const screwGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 8);
+    const offset = halfS - 0.45;
     const screwPos = [
-      [-halfS + 0.6, railHeight / 2 - 0.6, 0.1],
-      [halfS - 0.6, railHeight / 2 - 0.6, 0.1],
-      [-halfS + 0.6, -railHeight / 2 + 0.6, 0.1],
-      [halfS - 0.6, -railHeight / 2 + 0.6, 0.1]
+      [-offset, panelHeight / 2 - 0.4, 0.1],
+      [offset, panelHeight / 2 - 0.4, 0.1],
+      [-offset, -panelHeight / 2 + 0.4, 0.1],
+      [offset, -panelHeight / 2 + 0.4, 0.1]
     ];
     screwPos.forEach(([sx, sy, sz]) => {
       const screw = new THREE.Mesh(screwGeom, screwMat);
@@ -169,178 +255,157 @@ function createRealisticCubeSat() {
     cubesatGroup.add(faceGroup);
   });
 
-  // 4. FRONTAL COMPLETAMENTE ABIERTO PARA VISUALIZACIÓN DIRECTA (SIN PUERTA)
+  // 4. INNER GREY COMPARTMENT (TOP 30% OF HEIGHT)
+  const compHeight = 2.4;
+  const compGeom = new THREE.BoxGeometry(size - 0.6, compHeight, size - 0.6);
+  const compartment = new THREE.Mesh(compGeom, greyMetalMat);
+  compartment.position.set(0, 2.7, 0);
+  cubesatGroup.add(compartment);
 
-  // 5. COMPONENTES REALES DENTRO DEL CUBESAT (PROPORCIONALMENTE ESCALADOS FACTOR 0.8)
+  // 5. INNER ELECTRONICS STACK (FILLING THE OTHER 70% SPACE DENSELY)
   const stackGroup = new THREE.Group();
-  const layerSpacing = 1.4;
-  const startY = -2.2;
+  const layerSpacing = 1.15;
+  const startY = -3.1;
 
-  const rodGeom = new THREE.CylinderGeometry(0.08, 0.08, 5.6, 8);
-  const rodOffset = 2.8;
-  const rodCoords = [
-    [-rodOffset, 0, -rodOffset],
-    [rodOffset, 0, -rodOffset],
-    [-rodOffset, 0, rodOffset],
-    [rodOffset, 0, rodOffset]
-  ];
-  rodCoords.forEach(([rx, ry, rz]) => {
-    const rod = new THREE.Mesh(rodGeom, brassMat);
-    rod.position.set(rx, 0, rz);
-    stackGroup.add(rod);
+  // PCB layers green base material
+  const pcbMat = new THREE.MeshPhysicalMaterial({
+    color: 0x15803d, // Dark PCB green
+    roughness: 0.35,
+    metalness: 0.1,
+    clearcoat: 0.3
   });
 
-  const pcbBoardGeom = new THREE.BoxGeometry(6.4, 0.12, 6.4);
+  // Brass support rods for PCBs
+  const brassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe8a020,
+    metalness: 0.8,
+    roughness: 0.15,
+    clearcoat: 0.5
+  });
 
-  // --- CAPA 1: EPS & BATERÍAS LIPO 18650 ---
+  const redBatteryMat = new THREE.MeshPhysicalMaterial({
+    color: 0xdc2626,
+    roughness: 0.2,
+    metalness: 0.05,
+    clearcoat: 0.4
+  });
+
+  const rodGeom = new THREE.CylinderGeometry(0.08, 0.08, 4.6, 8);
+  const rodOffset = 2.8;
+  const rodCoords = [
+    [-rodOffset, -1.0, -rodOffset],
+    [rodOffset, -1.0, -rodOffset],
+    [-rodOffset, -1.0, rodOffset],
+    [rodOffset, -1.0, rodOffset]
+  ];
+  rodCoords.forEach(([rx, ry, rz]) => {
+    // If it's a valid coordinate array
+    if (typeof rx === 'number' && typeof rz === 'number') {
+      const rod = new THREE.Mesh(rodGeom, brassMat);
+      rod.position.set(rx, ry, rz);
+      stackGroup.add(rod);
+    }
+  });
+
+  const pcbBoardGeom = new THREE.BoxGeometry(6.4, 0.08, 6.4);
+
+  // --- PCB LAYER 1: BATTERIES & POWER ---
   const pcb1 = new THREE.Mesh(pcbBoardGeom, pcbMat);
   pcb1.position.y = startY;
   stackGroup.add(pcb1);
 
-  const batGeom = new THREE.CylinderGeometry(0.55, 0.55, 2.5, 16);
-  const batWrapperMat = new THREE.MeshPhysicalMaterial({ color: 0x15803d, roughness: 0.2, metalness: 0.1, clearcoat: 0.5, emissive: 0x052e16, emissiveIntensity: 0.3 });
-  const batCapMat = new THREE.MeshPhysicalMaterial({ color: 0xfbbf24, metalness: 1.0, roughness: 0.05, clearcoat: 1.0 });
+  // Red battery cylinders (Lithium cells) lying down
+  const batGeom = new THREE.CylinderGeometry(0.48, 0.48, 2.2, 16);
+  const batCapMat = new THREE.MeshPhysicalMaterial({ color: 0xd1d5db, metalness: 0.8, roughness: 0.15 });
 
   const bat1Group = new THREE.Group();
-  bat1Group.add(new THREE.Mesh(batGeom, batWrapperMat));
-  const cap1 = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.56, 0.15, 16), batCapMat);
-  cap1.position.y = 1.25;
+  bat1Group.add(new THREE.Mesh(batGeom, redBatteryMat));
+  const cap1 = new THREE.Mesh(new THREE.CylinderGeometry(0.49, 0.49, 0.08, 16), batCapMat);
+  cap1.position.y = 1.1;
   bat1Group.add(cap1);
   bat1Group.rotation.z = Math.PI / 2;
-  bat1Group.position.set(0, startY + 0.35, -1.3);
+  bat1Group.position.set(-1.0, startY + 0.35, -1.2);
   stackGroup.add(bat1Group);
 
   const bat2Group = bat1Group.clone();
-  bat2Group.position.set(0, startY + 0.35, 1.3);
+  bat2Group.position.set(1.0, startY + 0.35, -1.2);
   stackGroup.add(bat2Group);
 
-  const inaPcb = new THREE.Mesh(
-    new THREE.BoxGeometry(0.8, 0.12, 0.8),
-    new THREE.MeshPhysicalMaterial({ color: 0xf59e0b, metalness: 0.7, roughness: 0.2, emissive: 0x92400e, emissiveIntensity: 0.4 })
-  );
-  inaPcb.position.set(-1.8, startY + 0.15, 0);
-  stackGroup.add(inaPcb);
+  // Another set of red batteries
+  const bat3Group = bat1Group.clone();
+  bat3Group.position.set(-1.0, startY + 0.35, 1.2);
+  stackGroup.add(bat3Group);
 
-  // --- CAPA 2: OBC (ESP32 + MPU6050) ---
+  const bat4Group = bat1Group.clone();
+  bat4Group.position.set(1.0, startY + 0.35, 1.2);
+  stackGroup.add(bat4Group);
+
+  // --- PCB LAYER 2: OBC (ESP32 CPU & MEMS SENSORS) ---
   const pcb2 = new THREE.Mesh(pcbBoardGeom, pcbMat);
   pcb2.position.y = startY + layerSpacing;
   stackGroup.add(pcb2);
 
+  // ESP32 module details
   const espGroup = new THREE.Group();
-  espGroup.position.set(0, startY + layerSpacing + 0.12, 0);
-  const espBase = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 2.5), new THREE.MeshPhysicalMaterial({ color: 0x0f1729, metalness: 0.3, roughness: 0.4, emissive: 0x0a0f20, emissiveIntensity: 0.2 }));
+  espGroup.position.set(-0.8, startY + layerSpacing + 0.08, -0.6);
+  const espBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 2.2), new THREE.MeshPhysicalMaterial({ color: 0x1f2937, roughness: 0.5 }));
   espGroup.add(espBase);
-  const espShield = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.16, 1.6), new THREE.MeshPhysicalMaterial({ color: 0xe8edf5, metalness: 1.0, roughness: 0.05, clearcoat: 1.0 }));
-  espShield.position.set(0, 0.08, -0.2);
+  const espShield = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 1.4), new THREE.MeshPhysicalMaterial({ color: 0xe5e7eb, metalness: 0.85, roughness: 0.2 }));
+  espShield.position.set(0, 0.05, -0.2);
   espGroup.add(espShield);
-  const ledMesh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.15), new THREE.MeshPhysicalMaterial({ color: 0x00ffff, emissive: 0x00e5ff, emissiveIntensity: 3.0 }));
-  ledMesh.position.set(0.6, 0.08, 0.85);
-  espGroup.add(ledMesh);
+  const led1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.1), new THREE.MeshPhysicalMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 2.0 }));
+  led1.position.set(0.5, 0.05, 0.7);
+  espGroup.add(led1);
   stackGroup.add(espGroup);
 
-  const mpuGroup = new THREE.Group();
-  mpuGroup.position.set(-2.0, startY + layerSpacing + 0.1, -1.8);
-  const mpuPcb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 1.2), new THREE.MeshPhysicalMaterial({ color: 0x1d4ed8, metalness: 0.2, roughness: 0.3, emissive: 0x1e3a8a, emissiveIntensity: 0.4 }));
-  mpuGroup.add(mpuPcb);
-  const mpuChip = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.4), new THREE.MeshPhysicalMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.1, clearcoat: 0.8 }));
-  mpuChip.position.y = 0.08;
-  mpuGroup.add(mpuChip);
-  stackGroup.add(mpuGroup);
+  // SCD40 CO2 sensor block
+  const scdBlock = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 1.0), new THREE.MeshPhysicalMaterial({ color: 0x27272a, roughness: 0.6 }));
+  scdBlock.position.set(1.5, startY + layerSpacing + 0.29, 1.5);
+  stackGroup.add(scdBlock);
 
-  // --- CAPA 3: COMUNICACIONES (GPS & RF) ---
+  // --- PCB LAYER 3: COMMUNICATIONS LAYER (RF TRANSCEIVER & NESTED CIRCUITS) ---
   const pcb3 = new THREE.Mesh(pcbBoardGeom, pcbMat);
   pcb3.position.y = startY + layerSpacing * 2;
   stackGroup.add(pcb3);
 
-  const gpsGroup = new THREE.Group();
-  gpsGroup.position.set(-1.6, startY + layerSpacing * 2 + 0.16, 1.6);
-  const gpsShield = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 1.2), new THREE.MeshPhysicalMaterial({ color: 0xd4d8e0, metalness: 1.0, roughness: 0.05, clearcoat: 1.0 }));
-  gpsGroup.add(gpsShield);
-  const ceramicAnt = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.15, 0.9), new THREE.MeshPhysicalMaterial({ color: 0xfafafa, roughness: 0.85, emissive: 0x88aaff, emissiveIntensity: 0.15 }));
-  ceramicAnt.position.y = 0.12;
-  gpsGroup.add(ceramicAnt);
-  stackGroup.add(gpsGroup);
+  // Ceramic GPS antenna patch
+  const gpsPatch = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.22, 1.3), new THREE.MeshPhysicalMaterial({ color: 0xe2e8f0, roughness: 0.7 }));
+  gpsPatch.position.set(-1.6, startY + layerSpacing * 2 + 0.15, 1.5);
+  stackGroup.add(gpsPatch);
 
-  const rfPcb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 2.2), new THREE.MeshPhysicalMaterial({ color: 0x065f46, metalness: 0.3, roughness: 0.25, clearcoat: 0.5, emissive: 0x022c22, emissiveIntensity: 0.3 }));
-  rfPcb.position.set(1.8, startY + layerSpacing * 2 + 0.1, 0);
-  stackGroup.add(rfPcb);
+  // Metal RF shield can
+  const rfShield = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 2.2), greyMetalMat);
+  rfShield.position.set(1.2, startY + layerSpacing * 2 + 0.14, -0.8);
+  stackGroup.add(rfShield);
 
-  // --- CAPA 4: PAYLOAD SENSORES (BME280, SCD40 CO2, PARACAÍDAS) ---
+  // Coil antenna inductor detail
+  const coilGeom = new THREE.TorusGeometry(0.24, 0.06, 8, 24);
+  const coil = new THREE.Mesh(coilGeom, brassMat);
+  coil.rotation.y = Math.PI / 2;
+  coil.position.set(-1.4, startY + layerSpacing * 2 + 0.2, -1.0);
+  stackGroup.add(coil);
+
+  // --- PCB LAYER 4: PAYLOAD LAYER ---
   const pcb4 = new THREE.Mesh(pcbBoardGeom, pcbMat);
   pcb4.position.y = startY + layerSpacing * 3;
   stackGroup.add(pcb4);
 
-  const scdGroup = new THREE.Group();
-  scdGroup.position.set(1.8, startY + layerSpacing * 3 + 0.22, 1.6);
-  const scdBody = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.45, 1.0), new THREE.MeshPhysicalMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5, clearcoat: 0.7 }));
-  scdGroup.add(scdBody);
-  const scdMeshFilter = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 12), new THREE.MeshPhysicalMaterial({ color: 0xb0bec5, metalness: 1.0, roughness: 0.05, clearcoat: 1.0 }));
-  scdMeshFilter.position.y = 0.23;
-  scdGroup.add(scdMeshFilter);
-  stackGroup.add(scdGroup);
+  // Sensor microchips and header pins
+  const chip1 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.15, 0.9), new THREE.MeshStandardMaterial({ color: 0x111827 }));
+  chip1.position.set(-1.2, startY + layerSpacing * 3 + 0.1, 1.0);
+  stackGroup.add(chip1);
 
-  const bmePcb = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.8), new THREE.MeshPhysicalMaterial({ color: 0x7c3aed, metalness: 0.2, roughness: 0.3, emissive: 0x4c1d95, emissiveIntensity: 0.5 }));
-  bmePcb.position.set(-1.8, startY + layerSpacing * 3 + 0.08, 1.8);
-  stackGroup.add(bmePcb);
+  const chip2 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.15, 0.7), new THREE.MeshStandardMaterial({ color: 0x111827 }));
+  chip2.position.set(1.4, startY + layerSpacing * 3 + 0.1, -1.4);
+  stackGroup.add(chip2);
 
-  // Canasta del paracaídas y paracaídas (esfera naranja) proporcionalmente dimensionados y centrados
-  const paraCanisterGeom = new THREE.CylinderGeometry(1.0, 1.0, 1.3, 16);
-  const paraCanisterMat = new THREE.MeshPhysicalMaterial({ color: 0xb0bec5, metalness: 1.0, roughness: 0.08, clearcoat: 1.0, transparent: true, opacity: 0.55 });
-  const paraCanister = new THREE.Mesh(paraCanisterGeom, paraCanisterMat);
-  paraCanister.position.set(0, startY + layerSpacing * 3 + 0.65, 0);
-
-  const parachuteMesh = new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 16), new THREE.MeshPhysicalMaterial({ color: 0xf97316, roughness: 0.55, metalness: 0.1, clearcoat: 0.4, emissive: 0x7c2d12, emissiveIntensity: 0.2 }));
-  parachuteMesh.position.set(0, startY + layerSpacing * 3 + 0.65, 0);
-
-  stackGroup.add(paraCanister);
-  stackGroup.add(parachuteMesh);
+  // Header pins connector block
+  const header = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 1.8), new THREE.MeshStandardMaterial({ color: 0x18181b }));
+  header.position.set(0, startY + layerSpacing * 3 + 0.2, 1.6);
+  stackGroup.add(header);
 
   cubesatGroup.add(stackGroup);
-
-  // 6. ANTENAS DE COMUNICACIÓN
-  const smaBaseGeom = new THREE.CylinderGeometry(0.25, 0.32, 0.5, 12);
-  const smaBase = new THREE.Mesh(smaBaseGeom, brassMat);
-  smaBase.position.set(-2.0, railHeight / 2 + 0.25, -2.0);
-  cubesatGroup.add(smaBase);
-
-  const whipAntennaGeom = new THREE.CylinderGeometry(0.04, 0.04, 5.0, 8);
-  const whipAntenna = new THREE.Mesh(whipAntennaGeom, new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.9 }));
-  whipAntenna.position.set(-2.0, railHeight / 2 + 2.75, -2.0);
-  cubesatGroup.add(whipAntenna);
-
-  const smaBase2 = new THREE.Mesh(smaBaseGeom, brassMat);
-  smaBase2.position.set(2.0, railHeight / 2 + 0.25, 2.0);
-  cubesatGroup.add(smaBase2);
-
-  const rubberAntGeom = new THREE.CylinderGeometry(0.2, 0.14, 2.2, 12);
-  const rubberAnt = new THREE.Mesh(rubberAntGeom, new THREE.MeshStandardMaterial({ color: 0x111827 }));
-  rubberAnt.position.set(2.0, railHeight / 2 + 1.1, 2.0);
-  cubesatGroup.add(rubberAnt);
-
-  // 7. CINTA ROJA "REMOVE BEFORE FLIGHT"
-  const rbfGroup = new THREE.Group();
-  rbfGroup.position.set(halfS + 0.3, -0.8, halfS - 0.4);
-
-  const ringRingGeom = new THREE.TorusGeometry(0.35, 0.05, 8, 24);
-  const ringMesh = new THREE.Mesh(ringRingGeom, aluminumMat);
-  rbfGroup.add(ringMesh);
-
-  const ribbonGeom = new THREE.BoxGeometry(0.08, 3.5, 0.8);
-  const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.8 });
-  const ribbonMesh = new THREE.Mesh(ribbonGeom, ribbonMat);
-  ribbonMesh.position.set(0, -1.75, 0);
-  ribbonMesh.rotation.z = -0.15;
-  rbfGroup.add(ribbonMesh);
-
-  const textStripGeom = new THREE.BoxGeometry(0.1, 2.8, 0.5);
-  const textStripMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
-  const textStrip = new THREE.Mesh(textStripGeom, textStripMat);
-  textStrip.position.set(0, -1.75, 0);
-  textStrip.rotation.z = -0.15;
-  rbfGroup.add(textStrip);
-
-  cubesatGroup.add(rbfGroup);
-
+  
   return cubesatGroup;
 }
 
@@ -361,13 +426,13 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a2035); // Azul marino aclarado
+    scene.background = new THREE.Color(0x111827); // Matching dashboard background color
 
     const width = mountRef.current.clientWidth || 380;
     const height = mountRef.current.clientHeight || 280;
 
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 4.5, 20.0); // Zoom out: más alejado para ver el cubesat completo
+    camera.position.set(0, 4.5, 20.0);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
@@ -380,42 +445,34 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
     mountRef.current.appendChild(renderer.domElement);
 
     // --- ILUMINACIÓN EQUILIBRADA ---
-    // Ambiente moderado para rellenar sombras sin blanquear
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.50);
     scene.add(ambientLight);
 
-    // Luz principal desde la cámara frontal
     const mainLight = new THREE.DirectionalLight(0xffffff, 1.6);
     mainLight.position.set(8, 15, 18);
     scene.add(mainLight);
 
-    // Relleno izquierdo suave
     const fillLight = new THREE.DirectionalLight(0xcce8ff, 0.8);
     fillLight.position.set(-12, 5, 10);
     scene.add(fillLight);
 
-    // Relleno derecho suave
     const rightFill = new THREE.DirectionalLight(0xfff5e0, 0.6);
     rightFill.position.set(12, 5, 10);
     scene.add(rightFill);
 
-    // Contorno superior
     const topLight = new THREE.DirectionalLight(0xffffff, 0.5);
     topLight.position.set(0, 20, 5);
     scene.add(topLight);
 
-    // Acento cian neón lateral
     const cyanRimLight = new THREE.PointLight(0x00d4ff, 2.0, 30);
     cyanRimLight.position.set(-8, -3, 14);
     scene.add(cyanRimLight);
 
-    // Acento dorado cálido para el latón
     const warmLight = new THREE.PointLight(0xffbb55, 1.2, 20);
     warmLight.position.set(8, -4, 12);
     scene.add(warmLight);
 
     // --- CUBESAT GROUP ---
-    // Agregamos únicamente el diseño limpio y realista de createRealisticCubeSat sin meshes duplicados viejos
     const cubesatGroup = createRealisticCubeSat();
     scene.add(cubesatGroup);
     cubesatGroupRef.current = cubesatGroup;
@@ -424,7 +481,6 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
     let initialTouchDistance = null;
-
     let isPanning = false;
 
     const handleMouseDown = (e) => {
@@ -462,12 +518,10 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
 
     const handleWheel = (e) => {
       if (e.ctrlKey) {
-        // Zoom con Ctrl + Rueda
         e.preventDefault();
         camera.position.z += e.deltaY * 0.012;
         camera.position.z = Math.max(6.0, Math.min(30.0, camera.position.z));
       } else {
-        // PAN vertical directo con la Rueda
         e.preventDefault();
         manualOffsetRef.current.posY -= e.deltaY * 0.008;
         manualOffsetRef.current.posY = Math.max(-10.0, Math.min(10.0, manualOffsetRef.current.posY));
@@ -532,7 +586,7 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
         manualOffsetRef.current.posX += deltaX * 0.015;
         manualOffsetRef.current.posY -= deltaY * 0.015;
 
-        // Pinch to zoom simultáneo
+        // Pinch to zoom
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const currentDist = Math.sqrt(dx * dx + dy * dy);
@@ -558,14 +612,12 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
     domElement.addEventListener('touchend', handleTouchEnd);
 
     // --- ANIMATION LOOP ---
-    const toRad = Math.PI / 180;
     let animationFrameId;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      // Aplicar rotación inercial (telemetría offline) + offsets de arrastre
-      const { cabeceo: c, balanceo: b, giro: g } = rotRef.current;
+      // Aplicar rotación inercial + offsets de arrastre
       cubesatGroup.position.x = manualOffsetRef.current.posX;
       cubesatGroup.position.y = manualOffsetRef.current.posY;
 
@@ -605,12 +657,16 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
         currentMount.removeChild(renderer.domElement);
       }
       cubesatGroup.traverse((obj) => {
-        if (obj.isMesh) {
-          if (obj.geometry) obj.geometry.dispose();
+        if (obj.isMesh || obj.isLine || obj.isPoints) {
+          if (obj.geometry && typeof obj.geometry.dispose === 'function') {
+            obj.geometry.dispose();
+          }
           if (obj.material) {
             if (Array.isArray(obj.material)) {
-              obj.material.forEach(m => m.dispose());
-            } else {
+              obj.material.forEach(m => {
+                if (m && typeof m.dispose === 'function') m.dispose();
+              });
+            } else if (typeof obj.material.dispose === 'function') {
               obj.material.dispose();
             }
           }
@@ -704,7 +760,6 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
       <div className="cubesat-visor-3d" ref={mountRef} style={{ width: '100%', height: '100%' }}></div>
 
       <div className="visor-3d-controls">
-        {/* Fila de Rotación arriba/abajo */}
         <div className="visor-3d-btn-group-row">
           <button className="visor-3d-btn" onClick={() => rotateSat('up')} title="Orbitar Arriba">
             <i className="fa-solid fa-arrow-up"></i>
@@ -713,8 +768,6 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
             <i className="fa-solid fa-arrow-down"></i>
           </button>
         </div>
-
-        {/* Fila de Rotación izquierda/derecha */}
         <div className="visor-3d-btn-group-row">
           <button className="visor-3d-btn" onClick={() => rotateSat('left')} title="Orbitar Izquierda">
             <i className="fa-solid fa-arrow-left"></i>
@@ -723,23 +776,17 @@ const CubesatVisor3D = ({ cabeceo = 0, balanceo = 0, giro = 0 }) => {
             <i className="fa-solid fa-arrow-right"></i>
           </button>
         </div>
-
-        {/* Zoom */}
         <div className="visor-3d-btn-group-row">
-          <button className="visor-3d-btn" onClick={() => zoomSat('in')} title="Acercar (Zoom +)">
+          <button className="visor-3d-btn" onClick={() => zoomSat('in')} title="Zoom In">
             <i className="fa-solid fa-magnifying-glass-plus"></i>
           </button>
-          <button className="visor-3d-btn" onClick={() => zoomSat('out')} title="Alejar (Zoom -)">
+          <button className="visor-3d-btn" onClick={() => zoomSat('out')} title="Zoom Out">
             <i className="fa-solid fa-magnifying-glass-minus"></i>
           </button>
         </div>
-
-        {/* Reset */}
-        <div className="visor-3d-btn-group-row">
-          <button className="visor-3d-btn" onClick={resetSat} title="Vista de Fábrica (Home)" style={{ width: '62px' }}>
-            <i className="fa-solid fa-house" style={{ marginRight: '4px' }}></i> Home
-          </button>
-        </div>
+        <button className="visor-3d-btn" onClick={resetSat} title="Restablecer Vista" style={{ width: '100%' }}>
+          <i className="fa-solid fa-house"></i> <span style={{ fontSize: '9px', marginLeft: '4px' }}>Home</span>
+        </button>
       </div>
     </div>
   );

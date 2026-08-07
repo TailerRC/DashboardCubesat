@@ -203,7 +203,7 @@ export default function Ubicacion() {
             <tbody>
               <tr><td>Latitud:</td><td className="gps-val">{data.latitud.v !== 0 ? `${data.latitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
               <tr><td>Longitud:</td><td className="gps-val">{data.longitud.v !== 0 ? `${data.longitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
-              <tr><td>Altitud GPS:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
+              <tr><td>Altitud de Vuelo:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
               <tr><td>Velocidad:</td><td className="gps-val">{data.velocidad_kmh.v.toFixed(1)} km/h</td></tr>
               <tr><td>Satélites:</td><td className="gps-val gps-ok">{data.satelites.v} visibles</td></tr>
               <tr><td>HDOP:</td><td className="gps-val gps-ok">{data.hdop.v.toFixed(1)}</td></tr>

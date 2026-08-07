@@ -1,12 +1,12 @@
 import React from 'react';
-import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
-import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import { useMisionContext } from '../../context/MisionContext';
+import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
 import './Mision.css';
 
 export default function Mision() {
-  const { data: misionData, faseUI, lastPacketId, isConnected } = useMisionMqtt();
-  const { data: ubiData } = useUbicacionMqtt();
+  const { data: misionData, faseUI, lastPacketId, isConnected } = useMisionContext();
+  const { sensors } = useAmbientalMqtt();
 
   const fasesUIList = [
     { step: 1, label: 'INICIALIZACIÓN', key: 'INICIALIZACIÓN', icon: 'fa-solid fa-sliders' },
@@ -27,9 +27,9 @@ export default function Mision() {
     return 'pending';
   };
 
-  // Use Altitud de Vuelo (GPS Telemetry) from Ubicación
-  const altitudHist = ubiData.altitud_gps.history || [];
-  const currentAltitud = ubiData.altitud_gps.v;
+  // Use Altura de Vuelo (Barometric / BME280) — starts at 0m from launch point
+  const altitudHist = sensors?.altura_barometrica_m?.history || [];
+  const currentAltitud = isConnected ? (sensors?.altura_barometrica_m?.v ?? 0) : 0;
 
   const altVals = altitudHist.map(pt => pt.value);
   const maxAltInHist = altVals.length > 0 ? Math.max(...altVals) : 0;
@@ -128,7 +128,7 @@ export default function Mision() {
         <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#ffeb3b' }}>
           <span className="mision-stat-label">Altitud Actual</span>
           <span className="mision-stat-value text-yellow">{currentAltitud.toFixed(1)} <span style={{fontSize:'16px'}}>m</span></span>
-          <span className="mision-stat-sub">Altitud de Vuelo (GPS)</span>
+          <span className="mision-stat-sub">Altitud de Vuelo (BME280)</span>
         </div>
       </section>
 

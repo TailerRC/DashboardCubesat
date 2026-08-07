@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
+import { useMisionContext } from '../../context/MisionContext';
 import './Sidebar.css';
 
 const navItems = [
@@ -25,7 +25,7 @@ const iconMap = {
 };
 
 export default function Sidebar() {
-  const { faseUI } = useMisionMqtt();
+  const { faseUI } = useMisionContext();
 
   return (
     <aside className="sidebar">

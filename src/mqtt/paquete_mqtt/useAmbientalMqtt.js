@@ -177,7 +177,10 @@ export function useAmbientalMqtt() {
             }
 
             if (sensorVal !== undefined && sensorVal !== null) {
-              const rawV = (typeof sensorVal === 'object' && sensorVal !== null) ? sensorVal.v : sensorVal;
+              let rawV = (typeof sensorVal === 'object' && sensorVal !== null) ? sensorVal.v : sensorVal;
+              if (key === 'radiacion_uv') {
+                rawV = 0.0;
+              }
               if (rawV !== null && rawV !== undefined && !isNaN(Number(rawV))) {
                 val = parseFloat(Number(rawV).toFixed(2));
               } else if (prevSensor.v !== null && prevSensor.v !== undefined) {

@@ -125,10 +125,13 @@ export default function Comunicacion() {
             <div className="legend-item"><div className="pkt-block pkt-error"></div> RX ERROR / LOSS</div>
           </div>
 
-          <h3 className="panel-header" style={{ textTransform: 'none', marginTop: '14px' }}>Progreso Acumulado de Recepción</h3>
-          <div className="progress-bar-container">
-            <div className="progress-bar-fill" style={{ width: `${progressPct}%` }}></div>
-            <span className="progress-text">{recvCount} / 10000 paquetes ({progressPct}%)</span>
+          <h3 className="panel-header" style={{ textTransform: 'none', marginTop: '14px' }}>Total de Paquetes Recibidos</h3>
+          <div className="total-packets-counter">
+            <i className="fa-solid fa-box-archive" style={{ color: '#8bc34a', marginRight: '10px', fontSize: '18px' }}></i>
+            <div>
+              <span className="counter-value">{recvCount}</span>
+              <span className="counter-unit"> paquetes procesados</span>
+            </div>
           </div>
         </div>
       </section>

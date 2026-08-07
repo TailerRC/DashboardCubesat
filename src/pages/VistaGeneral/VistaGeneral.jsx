@@ -1,7 +1,7 @@
 import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
 import { useSateliteMqtt } from '../../mqtt/paquete_mqtt/useSateliteMqtt';
-import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
+import { useMisionContext } from '../../context/MisionContext';
 import { useComunicacionMqtt } from '../../mqtt/paquete_mqtt/useComunicacionMqtt';
 import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
 import CubesatVisor3D from '../../components/3d/CubesatVisor3D';
@@ -12,7 +12,7 @@ export default function VistaGeneral() {
   const { sensors: ambSensors, estadoAmbiental, activeAlerts, isConnected } = useAmbientalMqtt();
   const { data: ubiData } = useUbicacionMqtt();
   const { data: satData } = useSateliteMqtt();
-  const { faseUI } = useMisionMqtt();
+  const { faseUI } = useMisionContext();
   const { data: commData } = useComunicacionMqtt();
   const { data: orientData } = useOrientacion3DMqtt();
 
