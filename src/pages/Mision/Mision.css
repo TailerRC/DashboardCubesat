@@ -36,7 +36,7 @@
   border: 1px solid #2a3038;
   border-left: 4px solid #4fc3f7;
   border-radius: 8px;
-  padding: 14px 20px;
+  padding: 16px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -93,20 +93,13 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ─── Top 2-Column Grid (Fases + Orientación) ─── */
-.mision-top-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-/* Fases (left) */
+/* ─── Fases Stepper (Full Width) ─── */
 .mision-fases {
   display: flex;
   flex-direction: column;
 }
 
-.fase-header { margin-bottom: 14px; }
+.fase-header { margin-bottom: 16px; }
 .fase-subtitle {
   font-size: 10px;
   font-weight: 700;
@@ -115,53 +108,142 @@
   letter-spacing: 1px;
 }
 .fase-title {
-  font-size: 24px;
-  color: #4fc3f7;
+  font-size: 20px;
+  color: #4caf50;
   margin: 2px 0 0;
   font-weight: 700;
   letter-spacing: 1px;
 }
 
 .fases-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1024px) {
+  .fases-list {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
 }
 
 .fase-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
-  border-radius: 7px;
+  justify-content: space-between;
+  text-align: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
   border: 1px solid;
   transition: all 0.2s;
+  min-height: 140px;
+  position: relative;
+}
+
+.fase-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.fase-status-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.fase-item-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: auto 0;
+  text-align: center;
+}
+
+.fase-icon-wrapper {
+  font-size: 24px;
+  transition: transform 0.2s;
+}
+
+.fase-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.fase-item-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.fase-step-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .fase-item.fase-completed {
-  background: linear-gradient(90deg, rgba(76,175,80,0.15), rgba(76,175,80,0.04));
-  border-color: rgba(76,175,80,0.35);
-  color: #a5d6a7;
+  background: linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.04));
+  border-color: rgba(76,175,80,0.4);
 }
-.fase-item.fase-completed .fase-icon { border-color: #4caf50; }
-.fase-item.fase-completed .fase-icon-inner { background-color: #4caf50; }
+.fase-item.fase-completed .fase-icon-wrapper { color: #4caf50; }
+.fase-item.fase-completed .fase-status-badge {
+  color: #81c784;
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+.fase-item.fase-completed .fase-label { color: #ffffff; }
 
 .fase-item.fase-active {
-  background: linear-gradient(90deg, rgba(79,195,247,0.18), rgba(79,195,247,0.06));
-  border-color: rgba(79,195,247,0.45);
-  color: #e1f5fe;
+  background: linear-gradient(135deg, rgba(79,195,247,0.22), rgba(79,195,247,0.06));
+  border-color: rgba(79,195,247,0.6);
+  box-shadow: 0 0 15px rgba(79, 195, 247, 0.2);
 }
-.fase-item.fase-active .fase-icon { border-color: #4fc3f7; animation: blink 1.5s infinite; }
-.fase-item.fase-active .fase-icon-inner { background-color: #4fc3f7; }
+.fase-item.fase-active .fase-icon-wrapper {
+  color: #4fc3f7;
+  font-size: 26px;
+}
+.fase-item.fase-active .fase-status-badge {
+  color: #4fc3f7;
+  background: rgba(79, 195, 247, 0.18);
+  border: 1px solid rgba(79, 195, 247, 0.4);
+}
+.fase-item.fase-active .fase-label {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
 
 .fase-item.fase-pending {
   background: rgba(255,255,255,0.02);
-  border-color: rgba(255,255,255,0.06);
-  color: #4b5563;
-  opacity: 0.7;
+  border-color: rgba(255,255,255,0.08);
 }
-.fase-item.fase-pending .fase-icon { border-color: #4b5563; }
+.fase-item.fase-pending .fase-icon-wrapper { color: #6b7280; }
+.fase-item.fase-pending .fase-status-badge {
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.fase-item.fase-pending .fase-label { color: #ffffff; opacity: 0.9; }
 
 @keyframes blink {
   0%, 100% { box-shadow: 0 0 0 0 rgba(79,195,247,0.6); }
@@ -179,103 +261,10 @@
   width: 8px; height: 8px;
   border-radius: 50%;
 }
-.fase-label {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-/* Orientación (right) */
-.mision-aceleracion {
-  display: flex;
-  flex-direction: column;
-}
-
-.aceleracion-visualizer {
-  position: relative;
-  width: 180px;
-  height: 180px;
-  margin: 0 auto 12px;
-  flex-shrink: 0;
-}
-
-.ax-label {
-  position: absolute;
-  font-size: 10px;
-  color: #6b7280;
-  font-family: 'JetBrains Mono', monospace;
-}
-.ax-top    { top: -14px;  left: 50%; transform: translateX(-50%); }
-.ax-bottom { bottom: -14px; left: 50%; transform: translateX(-50%); }
-.ax-left   { left: -28px; top: 50%; transform: translateY(-50%); }
-.ax-right  { right: -28px; top: 50%; transform: translateY(-50%); }
-
-.crosshair-container {
-  width: 100%; height: 100%;
-  background: linear-gradient(135deg, #151a20, #1e2530);
-  border-radius: 10px;
-  border: 1px solid #2a3038;
-  position: relative;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-}
-.crosshair-h {
-  position: absolute;
-  width: 100%; height: 1px;
-  background-color: rgba(79,195,247,0.35);
-}
-.crosshair-v {
-  position: absolute;
-  width: 1px; height: 100%;
-  background-color: rgba(79,195,247,0.35);
-}
-.crosshair-circle {
-  position: absolute;
-  width: 100px; height: 100px;
-  border: 1px solid rgba(79,195,247,0.3);
-  border-radius: 50%;
-}
-.crosshair-icon {
-  position: absolute;
-  z-index: 2;
-  transition: transform 0.1s ease-out;
-}
-
-.aceleracion-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid #2a3038;
-}
-
-.stat-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.stat-line strong {
-  color: #e5e7eb;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.drift-badge {
-  font-size: 9px;
-  color: #ffb74d;
-  background: rgba(255, 183, 77, 0.12);
-  border: 1px solid rgba(255, 183, 77, 0.3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-}
 
 /* ─── Perfil de Altitud vs Tiempo (Full Width) ─── */
 .mision-perfil {
-  min-height: 240px;
+  min-height: 300px;
 }
 
 .perfil-legend {
@@ -298,18 +287,18 @@
   color: #9ca3af;
 }
 
-/* ─── 4 Stat Cards Row ─── */
+/* ─── 2 Stat Cards Row ─── */
 .mision-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
 }
 
 .mision-stat-card {
   background-color: #1a1e23;
   border: 1px solid #2a3038;
   border-radius: 8px;
-  padding: 14px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -317,7 +306,7 @@
 }
 
 .mision-stat-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #6b7280;
   text-transform: uppercase;
@@ -326,13 +315,13 @@
 }
 
 .mision-stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .mision-stat-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: #9ca3af;
   margin-top: 4px;
 }

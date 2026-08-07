@@ -3,6 +3,7 @@
 // Publishes to MqttService on topic 'cempai/cubesat/telemetry/mision' every 0.5s - 1.0s.
 
 import { MqttService } from '../config/mqttConfig';
+import { updateMissionPhaseState, FASES_UI_NAMES } from '../../utils/missionPhaseLogic';
 
 const TOPIC = 'cempai/cubesat/telemetry/mision';
 
@@ -16,24 +17,20 @@ export const CDR_FASES = [
   'RECUPERACION'
 ];
 
-export const FASE_MAP_UI = {
-  PREPARACION_TIERRA: 'INICIALIZACIÓN',
-  INTEGRACION_ACOPLAMIENTO: 'INICIALIZACIÓN',
-  DESPEGUE_ASCENSO: 'ASCENSO / LANZAMIENTO',
-  ALTURA_MAXIMA_DESACOPLE: 'DESCENSO',
-  DESCENSO_CONTROLADO: 'DESCENSO', // Can shift to 'PROXIMIDAD AL SUELO' if alt <= 20m
-  ATERRIZAJE: 'ATERRIZADO',
-  RECUPERACION: 'ATERRIZADO'
-};
-
 let packetId = 5000;
 let timerId = null;
 let simulatedTimeSecs = 0;
 let accumulatedDrift = 0.0;
+let mockPhaseState = { currentPhase: FASES_UI_NAMES.INICIALIZACION, maxAltReached: 0, hasAscended: false };
 
 export function getMisionDataAtTime(secondsElapsed) {
   // Flight loop cycle of 1200 seconds (~20 minutes)
   const cycleTime = secondsElapsed % 1200;
+
+  // Reset mock phase state at beginning of cycle
+  if (cycleTime < 2) {
+    mockPhaseState = { currentPhase: FASES_UI_NAMES.INICIALIZACION, maxAltReached: 0, hasAscended: false };
+  }
   
   let faseCdrIdx = 0;
   let altitud = 0;
@@ -80,12 +77,10 @@ export function getMisionDataAtTime(secondsElapsed) {
   }
 
   const faseCdr = CDR_FASES[faseCdrIdx];
-  let faseUi = FASE_MAP_UI[faseCdr];
 
-  // Sub-state check for PROXIMIDAD AL SUELO
-  if (faseCdr === 'DESCENSO_CONTROLADO' && altitud <= 20) {
-    faseUi = 'PROXIMIDAD AL SUELO';
-  }
+  // Evaluate UI phase state from altitude
+  mockPhaseState = updateMissionPhaseState(altitud, mockPhaseState);
+  const faseUi = mockPhaseState.currentPhase;
 
   // Simulated orientation (Cabeceo, Balanceo, Giro/Yaw with drift)
   const cabeceo = parseFloat((2.3 + Math.sin(secondsElapsed * 0.2) * 1.5).toFixed(1));

@@ -1,19 +1,19 @@
 import React from 'react';
 import { useMisionMqtt } from '../../mqtt/paquete_mqtt/useMisionMqtt';
-import { useOrientacion3DMqtt } from '../../mqtt/paquete_mqtt/useOrientacion3DMqtt';
+import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
 import './Mision.css';
 
 export default function Mision() {
   const { data: misionData, faseUI, lastPacketId, isConnected } = useMisionMqtt();
-  const { data: orientData } = useOrientacion3DMqtt();
+  const { data: ubiData } = useUbicacionMqtt();
 
   const fasesUIList = [
-    { label: 'INICIALIZACIÓN', key: 'INICIALIZACIÓN' },
-    { label: 'ASCENSO / LANZAMIENTO', key: 'ASCENSO / LANZAMIENTO' },
-    { label: 'DESCENSO', key: 'DESCENSO' },
-    { label: 'PROXIMIDAD AL SUELO', key: 'PROXIMIDAD AL SUELO' },
-    { label: 'ATERRIZADO', key: 'ATERRIZADO' },
+    { step: 1, label: 'INICIALIZACIÓN', key: 'INICIALIZACIÓN', icon: 'fa-solid fa-sliders' },
+    { step: 2, label: 'ASCENSO / LANZAMIENTO', key: 'ASCENSO / LANZAMIENTO', icon: 'fa-solid fa-rocket' },
+    { step: 3, label: 'DESCENSO', key: 'DESCENSO', icon: 'fa-solid fa-parachute-box' },
+    { step: 4, label: 'PROXIMIDAD AL SUELO', key: 'PROXIMIDAD AL SUELO', icon: 'fa-solid fa-location-crosshairs' },
+    { step: 5, label: 'ATERRIZADO', key: 'ATERRIZADO', icon: 'fa-solid fa-flag-checkered' },
   ];
 
   // Helper to calculate status of each UI phase card based on current phaseUI
@@ -27,23 +27,13 @@ export default function Mision() {
     return 'pending';
   };
 
-  const formatUptime = (totalSecs) => {
-    const m = Math.floor(totalSecs / 60);
-    const s = totalSecs % 60;
-    return `T+${m}m ${s}s`;
-  };
+  // Use Altitud de Vuelo (GPS Telemetry) from Ubicación
+  const altitudHist = ubiData.altitud_gps.history || [];
+  const currentAltitud = ubiData.altitud_gps.v;
 
-  // Crosshair translation offset calculation for Orientation Panel
-  const cabeceoVal = orientData.cabeceo_deg.v;
-  const balanceoVal = orientData.balanceo_deg.v;
-  const giroVal = orientData.giro_yaw_deg.v;
-  const driftVal = orientData.giro_yaw_deg.drift_acumulado || 0.0;
-
-  const crosshairStyle = {
-    transform: `translate(${Math.max(-40, Math.min(40, balanceoVal * 2))}px, ${Math.max(-40, Math.min(40, -cabeceoVal * 2))}px)`
-  };
-
-  const altitudHist = misionData.altitud_m.history || [];
+  const altVals = altitudHist.map(pt => pt.value);
+  const maxAltInHist = altVals.length > 0 ? Math.max(...altVals) : 0;
+  const altEffectiveMax = Math.max(150, maxAltInHist * 1.15);
 
   return (
     <div className={`mision-view ${!isConnected ? 'view-stale' : ''}`}>
@@ -60,82 +50,44 @@ export default function Mision() {
           </div>
         </div>
         <div className="mision-banner-right">
+          {lastPacketId && <span className="pkt-badge">PKT ID: #{lastPacketId}</span>}
         </div>
       </section>
 
-      {/* ── Top 2-Column Grid: Fases + Orientación ── */}
-      <section className="mision-top-grid">
+      {/* ── Fases de Misión Stepper (Full Width Cards) ── */}
+      <section className="panel-card mision-fases premium-card-hover" style={{ '--card-color': '#4caf50' }}>
+        <div className="fase-header">
+          <span className="fase-subtitle">Secuencia de Misión</span>
+          <h2 className="fase-title">FASES DEL VUELO</h2>
+        </div>
 
-        {/* Panel Izquierdo: Fases de Misión */}
-        <div className="panel-card mision-fases premium-card-hover" style={{ '--card-color': '#4caf50' }}>
-          <div className="fase-header">
-            <span className="fase-subtitle">Fase Actual de la Misión</span>
-            <h2 className="fase-title">{faseUI}</h2>
-          </div>
+        <div className="fases-list">
+          {fasesUIList.map((fase) => {
+            const status = getFaseStatus(fase.key);
+            return (
+              <div key={fase.step} className={`fase-item fase-${status}`}>
+                <div className="fase-item-top">
+                  <span className="fase-status-badge">
+                    {status === 'completed' && <><i className="fa-solid fa-check"></i> COMPLETADO</>}
+                    {status === 'active' && <><i className="fa-solid fa-circle-dot fa-beat"></i> EN CURSO</>}
+                    {status === 'pending' && <>PENDIENTE</>}
+                  </span>
+                </div>
 
-          <div className="fases-list">
-            {fasesUIList.map((fase, i) => {
-              const status = getFaseStatus(fase.key);
-              return (
-                <div key={i} className={`fase-item fase-${status}`}>
-                  <div className="fase-icon">
-                    {status !== 'pending' && <div className="fase-icon-inner"></div>}
+                <div className="fase-item-center">
+                  <div className="fase-icon-wrapper">
+                    <i className={fase.icon}></i>
                   </div>
                   <span className="fase-label">{fase.label}</span>
-                  {status === 'completed' && (
-                    <i className="fa-solid fa-check" style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.8 }}></i>
-                  )}
-                  {status === 'active' && (
-                    <i className="fa-solid fa-circle-dot fa-beat" style={{ marginLeft: 'auto', fontSize: '12px', color: '#4fc3f7' }}></i>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Panel Derecho: Orientación en tiempo real (CDR Corrección 6) */}
-        <div className="panel-card mision-aceleracion premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
-          <h3 className="panel-header" style={{ textAlign: 'center' }}>ORIENTACIÓN EN TIEMPO REAL</h3>
-
-          <div className="aceleracion-visualizer">
-            <span className="ax-label ax-top">+20° Pitch</span>
-            <span className="ax-label ax-bottom">−20° Pitch</span>
-            <span className="ax-label ax-left">−20° Roll</span>
-            <span className="ax-label ax-right">+20° Roll</span>
-
-            <div className="crosshair-container">
-              <div className="crosshair-h"></div>
-              <div className="crosshair-v"></div>
-              <div className="crosshair-circle"></div>
-              <div className="crosshair-icon" style={crosshairStyle}>
-                <i className="fa-solid fa-crosshairs" style={{ color: '#4fc3f7', fontSize: '22px' }}></i>
+                <div className="fase-item-bottom">
+                  <span className="fase-step-num">FASE 0{fase.step}</span>
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div className="aceleracion-stats">
-            <div className="stat-line">
-              <span>Cabeceo (Pitch):</span>
-              <strong>{cabeceoVal >= 0 ? `+${cabeceoVal}` : cabeceoVal}°</strong>
-            </div>
-            <div className="stat-line">
-              <span>Balanceo (Roll):</span>
-              <strong>{balanceoVal >= 0 ? `+${balanceoVal}` : balanceoVal}°</strong>
-            </div>
-            <div className="stat-line">
-              <span>Giro (Yaw):</span>
-              <div>
-                <strong>{giroVal}°</strong>
-                {/* CDR Corrección 4: Indicator for drift estimation without magnetometer */}
-                <span className="drift-badge" title="Calculado por integración de gyro_z. Deriva acumulada estimada.">
-                  ⚠ Estimado ({driftVal.toFixed(1)}° drift)
-                </span>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
-
       </section>
 
       {/* ── Perfil de Altitud vs Tiempo (Full Width) ── */}
@@ -148,7 +100,7 @@ export default function Mision() {
         <div className="perfil-legend">
           <span className="legend-item">
             <span className="legend-dot" style={{ background: '#ffeb3b' }}></span>
-            Altitud Telemetría (m)
+            Altitud Telemetría / Vuelo (m)
           </span>
           <span className="legend-item">
             <span className="legend-dot" style={{ background: '#4fc3f7', opacity: 0.6 }}></span>
@@ -156,7 +108,7 @@ export default function Mision() {
           </span>
         </div>
 
-        <div style={{ height: '180px', marginTop: '6px' }}>
+        <div style={{ height: '240px', marginTop: '6px' }}>
           <SensorChart
             data={altitudHist.map(pt => ({
               value: pt.value,
@@ -164,35 +116,31 @@ export default function Mision() {
             }))}
             color="#ffeb3b"
             yMin={0}
-            yMax={150}
+            yMax={altEffectiveMax}
             unit="m"
             decimals={1}
           />
         </div>
       </section>
 
-      {/* ── Stat KPI Cards Row ── */}
+      {/* ── Stat KPI Cards Row (2 Columns: Altitud Actual y Velocidad Vertical) ── */}
       <section className="mision-stats-grid">
         <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#ffeb3b' }}>
           <span className="mision-stat-label">Altitud Actual</span>
-          <span className="mision-stat-value text-yellow">{misionData.altitud_m.v.toFixed(1)} <span style={{fontSize:'14px'}}>m</span></span>
-          <span className="mision-stat-sub">Sensor Barométrico / GPS</span>
+          <span className="mision-stat-value text-yellow">{currentAltitud.toFixed(1)} <span style={{fontSize:'16px'}}>m</span></span>
+          <span className="mision-stat-sub">Altitud de Vuelo (GPS)</span>
         </div>
 
         <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#4fc3f7' }}>
           <span className="mision-stat-label">Velocidad Vertical</span>
-          <span className="mision-stat-value text-blue">{misionData.velocidad_vertical_ms.v > 0 ? `+${misionData.velocidad_vertical_ms.v}` : misionData.velocidad_vertical_ms.v} <span style={{fontSize:'14px'}}>m/s</span></span>
+          <span className="mision-stat-value text-blue">{misionData.velocidad_vertical_ms.v > 0 ? `+${misionData.velocidad_vertical_ms.v}` : misionData.velocidad_vertical_ms.v} <span style={{fontSize:'16px'}}>m/s</span></span>
           <span className="mision-stat-sub">{misionData.velocidad_vertical_ms.v < 0 ? 'Descendiendo' : misionData.velocidad_vertical_ms.v > 0 ? 'Ascendiendo' : 'Estable'}</span>
         </div>
-
-        <div className="mision-stat-card premium-card-hover" style={{ '--card-color': '#ab47bc' }}>
-          <span className="mision-stat-label">Tiempo de Vuelo</span>
-          <span className="mision-stat-value" style={{color:'#ab47bc'}}>{formatUptime(misionData.t_vuelo_seg.v)}</span>
-          <span className="mision-stat-sub">Crono Misión T-0</span>
-        </div>
       </section>
-
 
     </div>
   );
 }
+
+
+
