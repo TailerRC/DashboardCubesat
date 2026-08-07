@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { MqttService } from '../config/mqttConfig';
+import { getSateliteValueAtTime } from '../simulacion/sateliteMock';
 
-const TOPIC = 'cempai/cubesat/telemetry/satelite';
 const HISTORY_SIZE = 20;
 
 const KEY_MAP = {
   voltaje_v: 'voltaje',
   corriente_ma: 'corriente',
   consumo_w: 'consumo',
-  // accel_x/y/z → exclusivos de useOrientacion3DMqtt (topic: orientacion3d)
   sensores_activos: 'sensores_activos',
   temp_mcu: 'temp_mcu',
   memoria_flash_ok: 'memoria_flash_ok',
@@ -33,47 +31,29 @@ export function useSateliteMqtt() {
     return initial;
   });
 
-  const [lastPacketId, setLastPacketId] = useState(null);
-  const [lastValidPacketTime, setLastValidPacketTime] = useState(null);
-  const lastValidRecvTimeRef = useRef({});
+  const [lastPacketId, setLastPacketId] = useState(3000);
+  const simTimeRef = useRef(0);
 
   useEffect(() => {
-    const now = Date.now();
-    Object.keys(KEY_MAP).forEach(key => {
-      lastValidRecvTimeRef.current[key] = now;
-    });
-
-    const handleMessage = (packet) => {
-      setLastPacketId(packet.packet_id);
-
+    const interval = setInterval(() => {
+      const nextDelay = 750; // average delay matching mock publisher rate
+      simTimeRef.current += nextDelay / 1000.0;
+      const t = simTimeRef.current;
       const packetTime = Date.now();
-      const isPacketLostOrCorrupt = (packet.received === false) || (packet.crc_valido === false) || !packet.data;
+
+      setLastPacketId(prev => prev + 1);
 
       setSateliteData(prev => {
         const nextData = {};
         Object.keys(prev).forEach(key => {
           const prevItem = prev[key];
-          let val = prevItem.v;
-          let hace_seg = prevItem.hace_seg;
-          let stale = prevItem.stale;
-          let history = prevItem.history;
+          const mockKey = KEY_MAP[key];
 
-          if (!isPacketLostOrCorrupt) {
-            const payloadVal = packet.data[key];
-            if (payloadVal !== undefined && payloadVal !== null) {
-              const rawV = (typeof payloadVal === 'object' && payloadVal !== null) ? payloadVal.v : payloadVal;
-              val = (rawV !== null && rawV !== undefined) ? rawV : (prevItem.v ?? 0);
-              const rawHaceSeg = (typeof payloadVal === 'object' && payloadVal !== null) ? payloadVal.hace_seg : undefined;
-              hace_seg = (rawHaceSeg !== undefined && rawHaceSeg !== null) ? rawHaceSeg : (prevItem.hace_seg || 0);
-              stale = false;
-              lastValidRecvTimeRef.current[key] = packetTime - (hace_seg * 1000);
-            }
-          } else {
-            stale = true;
-          }
+          let val = getSateliteValueAtTime(mockKey, t);
+          let history = prevItem.history ? [...prevItem.history] : null;
 
           if (history) {
-            history = [...history, { value: val, timestamp: packetTime }];
+            history.push({ value: val, timestamp: packetTime });
             if (history.length > HISTORY_SIZE) {
               history.shift();
             }
@@ -81,52 +61,14 @@ export function useSateliteMqtt() {
 
           nextData[key] = {
             v: val,
-            hace_seg,
-            stale,
+            hace_seg: 0.0,
+            stale: false,
             history
           };
         });
-
-        if (!isPacketLostOrCorrupt) {
-          setLastValidPacketTime(packetTime);
-        }
-
         return nextData;
       });
-    };
-
-    const unsubscribe = MqttService.subscribe(TOPIC, handleMessage);
-    return () => unsubscribe();
-  }, []);
-
-  // Smooth updates of ages every 100ms
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setSateliteData(prev => {
-        const next = {};
-        let changed = false;
-        Object.keys(prev).forEach(key => {
-          const lastTime = lastValidRecvTimeRef.current[key];
-          if (lastTime) {
-            const ageSecs = parseFloat(((now - lastTime) / 1000).toFixed(1));
-            if (ageSecs !== prev[key].hace_seg) {
-              changed = true;
-              next[key] = {
-                ...prev[key],
-                hace_seg: ageSecs,
-                stale: prev[key].stale || ageSecs > 1.5
-              };
-            } else {
-              next[key] = prev[key];
-            }
-          } else {
-            next[key] = prev[key];
-          }
-        });
-        return changed ? next : prev;
-      });
-    }, 100);
+    }, 750);
 
     return () => clearInterval(interval);
   }, []);
@@ -134,6 +76,6 @@ export function useSateliteMqtt() {
   return {
     data: sateliteData,
     lastPacketId,
-    isConnected: lastValidPacketTime !== null && (Date.now() - lastValidPacketTime) <= 5000
+    isConnected: true
   };
 }

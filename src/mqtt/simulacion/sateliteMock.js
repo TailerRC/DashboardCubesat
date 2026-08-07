@@ -10,9 +10,9 @@ export const SATELITE_CONFIGS = {
   voltaje: {
     label: 'Voltaje Batería',
     unit: 'V',
-    yMin: 11.0,
-    yMax: 13.0,
-    threshold: 11.5,
+    yMin: 5.5,
+    yMax: 7.6,
+    threshold: 6.2,
     decimals: 2,
     color: '#ef5350'
   },
@@ -20,8 +20,8 @@ export const SATELITE_CONFIGS = {
     label: 'Corriente',
     unit: 'mA',
     yMin: 0,
-    yMax: 900,
-    threshold: 900,
+    yMax: 1100,
+    threshold: 1000,
     decimals: 1,
     color: '#42a5f5'
   },
@@ -29,8 +29,8 @@ export const SATELITE_CONFIGS = {
     label: 'Consumo Energía',
     unit: 'W',
     yMin: 0.0,
-    yMax: 10.0,
-    threshold: 10.0,
+    yMax: 8.0,
+    threshold: 7.4,
     decimals: 2,
     color: '#ba68c8'
   }
@@ -41,16 +41,16 @@ export function getSateliteValueAtTime(key, secondsElapsed) {
 
   switch (key) {
     case 'voltaje': {
-      // Discharge curve: slowly decays from 12.6V downwards.
-      const volt = 12.35 - (t * 0.0001) + Math.sin(t * 0.02) * 0.015;
-      return parseFloat(Math.max(11.1, Math.min(12.8, volt)).toFixed(2));
+      // 2S battery discharge: decays very slowly from 7.4V max (batteries well charged).
+      const volt = 7.40 - (t * 0.00002) + Math.sin(t * 0.005) * 0.003;
+      return parseFloat(Math.max(6.0, Math.min(7.4, volt)).toFixed(2));
     }
     case 'corriente': {
-      // Fluctuates around 450mA, spikes periodically (simulating radio transmit).
-      const base = 440;
-      const spike = (Math.abs(Math.sin(t * 0.05)) > 0.85) ? 140 : 0;
-      const noise = Math.sin(t * 0.2) * 8 + (Math.sin(t * 0.8) * 3);
-      return parseFloat(Math.max(300, Math.min(850, base + spike + noise)).toFixed(1));
+      // Calm, smooth fluctuations: base around 450mA with periodic smooth transmission wave peaking at 1000mA (1A).
+      const base = 450;
+      const varAmp = Math.sin(t * 0.02) * 40;
+      const txWave = Math.max(0, Math.sin(t * 0.01)) * 510;
+      return parseFloat(Math.max(300, Math.min(1000, base + varAmp + txWave)).toFixed(1));
     }
     case 'consumo': {
       // P = V * I / 1000
