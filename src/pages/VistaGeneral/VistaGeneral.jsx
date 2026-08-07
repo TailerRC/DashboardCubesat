@@ -26,7 +26,9 @@ export default function VistaGeneral() {
   const co2Val = fmt(ambSensors?.co2_ppm?.v, 2);
   const tempVal = fmt(ambSensors?.temperatura_c?.v, 2);
   const uvVal = fmt(ambSensors?.radiacion_uv?.v, 2);
-  const altVal = fmt(ubiData?.altitud_gps?.v, 2);
+  const altVal = ambSensors?.altura_barometrica_m?.calibrando
+    ? 'Calib...'
+    : fmt(ambSensors?.altura_barometrica_m?.v, 2);
   const voltVal = fmt(satData?.voltaje_v?.v, 2);
 
   const cards = [
@@ -54,8 +56,8 @@ export default function VistaGeneral() {
     {
       icon: <i className="fa-solid fa-mountain"></i>,
       value: altVal,
-      unit: 'm',
-      label: 'ALTITUD DE VUELO',
+      unit: ambSensors?.altura_barometrica_m?.calibrando ? '' : 'm',
+      label: 'ALTITUD DE VUELO (BME280)',
       color: '#ef5350',
     },
     {

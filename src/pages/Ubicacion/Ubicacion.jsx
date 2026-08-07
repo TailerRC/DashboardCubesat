@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useUbicacionMqtt } from '../../mqtt/paquete_mqtt/useUbicacionMqtt';
+import { useAmbientalMqtt } from '../../mqtt/paquete_mqtt/useAmbientalMqtt';
 import SensorChart from '../../components/Charts/SensorChart';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,6 +12,7 @@ const LAUNCH_LON = -77.0900;
 
 export default function Ubicacion() {
   const { data, lastPacketId } = useUbicacionMqtt();
+  const { sensors } = useAmbientalMqtt();
 
   const isStale = data.latitud.stale;
 
@@ -128,8 +130,12 @@ export default function Ubicacion() {
     }
   }, [data]);
 
-  // 2. Dynamic Y-Axis scale for Altitud GPS
-  const altHist = data.altitud_gps.history || [];
+  const altitudVuelo = sensors.altura_barometrica_m?.v ?? 0;
+  const historialAltitud = sensors.altura_barometrica_m?.history || [];
+  const calibrandoAltitud = sensors.altura_barometrica_m?.calibrando ?? false;
+
+  // 2. Dynamic Y-Axis scale for Altitud
+  const altHist = historialAltitud;
   const altVals = altHist.map(pt => pt.value);
   const maxAltInHist = altVals.length > 0 ? Math.max(...altVals) : 0;
   const altEffectiveMax = Math.max(200, maxAltInHist * 1.15); // min 200m
@@ -197,7 +203,7 @@ export default function Ubicacion() {
             <tbody>
               <tr><td>Latitud:</td><td className="gps-val">{data.latitud.v !== 0 ? `${data.latitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
               <tr><td>Longitud:</td><td className="gps-val">{data.longitud.v !== 0 ? `${data.longitud.v.toFixed(6)}°` : '0.000000° (Sin Fix)'}</td></tr>
-              <tr><td>Altitud de Vuelo:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
+              <tr><td>Altitud GPS:</td><td className="gps-val gps-hi">{data.altitud_gps.v.toFixed(1)} m</td></tr>
               <tr><td>Velocidad:</td><td className="gps-val">{data.velocidad_kmh.v.toFixed(1)} km/h</td></tr>
               <tr><td>Satélites:</td><td className="gps-val gps-ok">{data.satelites.v} visibles</td></tr>
               <tr><td>HDOP:</td><td className="gps-val gps-ok">{data.hdop.v.toFixed(1)}</td></tr>
@@ -247,10 +253,16 @@ export default function Ubicacion() {
 
         {/* Altitud de Vuelo */}
         <div className="panel-card altitud-card premium-card-hover" style={{ '--card-color': '#ff9800' }}>
-          <h4 className="ubi-panel-header">ALTITUD DE VUELO</h4>
+          <h4 className="ubi-panel-header">ALTITUD DE VUELO (BME280)</h4>
           <div className="panel-main-value">
-            <span className="big-value">{data.altitud_gps.v.toFixed(0)}</span>
-            <span className="big-unit">m</span>
+            {calibrandoAltitud ? (
+              <span className="big-value" style={{ fontSize: '2rem' }}>Calibrando...</span>
+            ) : (
+              <>
+                <span className="big-value">{altitudVuelo.toFixed(1)}</span>
+                <span className="big-unit">m</span>
+              </>
+            )}
           </div>
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginTop: '4px', marginBottom: '8px' }}>
             {altHist.length > 0 && (

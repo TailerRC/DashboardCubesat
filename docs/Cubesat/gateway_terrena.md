@@ -29,10 +29,18 @@
 #define NRF_MISO 12
 #define NRF_MOSI 13
 
+// ── Buzzer pasivo (alarma de pérdida de señal RF) — ACTIVO ───────────────────
+//   3 pines: S (señal, va a BUZZER_PIN) / VCC (3.3V-5V) / GND
+//   Se maneja con el driver LEDC (PWM por hardware) en vez de tone()/noTone(),
+//   porque tone() es un stub vacío (no suena) en versiones viejas del core ESP32.
+#define BUZZER_PIN            27
+#define BUZZER_LEDC_CHANNEL   0
+#define BUZZER_LEDC_RES_BITS  8
+
 // =============================================================================
 // CREDENCIALES WIFI Y MQTT
 // =============================================================================
-const char* WIFI_SSID      = "Redmi Note 14";
+const char* WIFI_SSID      = "elias";
 const char* WIFI_PASSWORD  = "perraime";
 const char* MQTT_BROKER    = "broker.hivemq.com";
 const int   MQTT_PORT      = 1883;            // Sin TLS — proyecto demo
@@ -63,7 +71,9 @@ struct __attribute__((packed)) PktAmbiental {
   float    pres_rel;
   float    uv_idx;
   float    co2_ppm;
-};  // 24 bytes
+  float    altura_m;    // NUEVO — altitud barométrica relativa (m), calibrada por el OBC
+  bool     calibrando;  // NUEVO — true mientras el OBC no complete la calibración de 15s
+};  // 29 bytes
 
 struct __attribute__((packed)) PktSatelite {
   uint8_t  type;        // 2
@@ -148,6 +158,24 @@ static bool     recentWindow[20];
 static float ultimoPitch = 0.0f;
 static float ultimoRoll  = 0.0f;
 
+// ── Alarma de pérdida de señal RF (buzzer pasivo, no bloqueante) ─────────────
+#define SENAL_TIMEOUT_MS   2000    // 2s sin NINGÚN paquete RF → señal perdida (respaldo)
+#define CALIDAD_MINIMA_PCT 30.0f   // calidad_pct por debajo de esto → señal débil, suena
+
+static uint32_t ultimoPaqueteMillis = 0;
+static bool     buzzerActivo        = false;
+static float    ultimaCalidadPct    = 100.0f;  // se asume buena hasta el primer reporte real
+
+// Melodía tipo alarma de countdown/lanzamiento: 2 tonos alternados en escalada
+// + un tono largo final, con silencios entre notas. Se repite en loop mientras
+// la señal esté perdida. freq=0 significa silencio (nota de pausa).
+const uint16_t ALARM_NOTAS[]      = {880, 0, 1046, 0, 880, 0, 1046, 0, 1318, 1318, 0};
+const uint16_t ALARM_DURACIONES[] = {120, 60, 120, 60, 120, 60, 120, 60, 250, 250, 400};
+#define ALARM_PASOS (sizeof(ALARM_NOTAS) / sizeof(ALARM_NOTAS[0]))
+
+static uint8_t  alarmIndex      = 0;
+static uint32_t alarmNotaMillis = 0;
+
 // =============================================================================
 // SETUP
 // =============================================================================
@@ -173,6 +201,21 @@ void setup() {
   radio.startListening();                // Modo RX
 
   Serial.println(F("[OK] NRF24L01 listo — Modo RECEPTOR"));
+
+  // ── Buzzer pasivo (alarma de pérdida de señal) — driver LEDC ─────────────
+  ledcSetup(BUZZER_LEDC_CHANNEL, 2000, BUZZER_LEDC_RES_BITS);
+  ledcAttachPin(BUZZER_PIN, BUZZER_LEDC_CHANNEL);
+  ledcWriteTone(BUZZER_LEDC_CHANNEL, 0);  // silencio inicial
+  ultimoPaqueteMillis = millis();  // evita falsa alarma apenas arranca, antes del 1er paquete
+
+  // Beep de prueba al arrancar — 2 pitidos cortos, para confirmar el cableado
+  // sin tener que esperar el timeout de 2s. Si esto no suena, es un problema
+  // de cableado/alimentación del buzzer, no del código de la alarma.
+  ledcWriteTone(BUZZER_LEDC_CHANNEL, 1046); delay(120);
+  ledcWriteTone(BUZZER_LEDC_CHANNEL, 0);    delay(80);
+  ledcWriteTone(BUZZER_LEDC_CHANNEL, 1046); delay(120);
+  ledcWriteTone(BUZZER_LEDC_CHANNEL, 0);
+  Serial.println(F("[OK] Buzzer alarma listo (pin 27, canal LEDC 0) — beep de prueba emitido"));
 
   // ── WiFi ───────────────────────────────────────────────────────────────────
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -248,10 +291,15 @@ void publicarAmbiental(PktAmbiental& p) {
   JsonObject uv   = data.createNestedObject("radiacion_uv");
   uv["v"] = round(p.uv_idx * 10) / 10.0; uv["hace_seg"] = 0.0; uv["umbral_alerta"] = 7.5;
 
+  JsonObject alt = data.createNestedObject("altura_barometrica_m");
+  alt["v"]          = round(p.altura_m * 10) / 10.0;
+  alt["hace_seg"]   = 0.0;
+  alt["calibrando"] = p.calibrando;
+
   char buffer[1024];
   size_t bytes = serializeJson(doc, buffer);
   mqttClient.publish(TOPIC_AMBIENTAL, buffer, bytes);
-  Serial.printf("[MQTT→AMB] pkt#%d T=%.1f H=%.1f UV=%.1f\n", p.packet_id, p.temp_c, p.hum_pct, p.uv_idx);
+  Serial.printf("[MQTT→AMB] pkt#%d T=%.1f H=%.1f UV=%.1f Alt=%.1fm Calib=%d\n", p.packet_id, p.temp_c, p.hum_pct, p.uv_idx, p.altura_m, p.calibrando);
 }
 
 // ── Tópico 2: satelite ────────────────────────────────────────────────────────
@@ -451,6 +499,51 @@ void publicarComunicacion(PktComunicacion& p, bool recibidoOk) {
 }
 
 // =============================================================================
+// ALARMA DE PÉRDIDA DE SEÑAL RF (buzzer pasivo, no bloqueante)
+// =============================================================================
+
+// Reproduce la melodía de alarma paso a paso usando millis() — nunca usa delay(),
+// así no bloquea el MQTT ni la recepción RF mientras suena.
+void actualizarAlarmaBuzzer() {
+  if (!buzzerActivo) return;
+
+  if (millis() - alarmNotaMillis >= ALARM_DURACIONES[alarmIndex]) {
+    alarmIndex = (alarmIndex + 1) % ALARM_PASOS;
+    alarmNotaMillis = millis();
+
+    if (ALARM_NOTAS[alarmIndex] == 0) {
+      ledcWriteTone(BUZZER_LEDC_CHANNEL, 0);
+    } else {
+      ledcWriteTone(BUZZER_LEDC_CHANNEL, ALARM_NOTAS[alarmIndex]);
+    }
+  }
+}
+
+// Revisa si la señal está en mal estado: por calidad baja (calidad_pct del
+// tópico comunicacion) o por ausencia total de paquetes (respaldo, cubre el
+// caso de que el OBC se apague y calidad_pct se quede "congelada" en su
+// último valor bueno). Enciende/apaga el estado de alarma — la reproducción
+// la maneja actualizarAlarmaBuzzer().
+void revisarSenalPerdida() {
+  bool sinPaquetes = (millis() - ultimoPaqueteMillis) > SENAL_TIMEOUT_MS;
+  bool calidadBaja = (ultimaCalidadPct < CALIDAD_MINIMA_PCT);
+  bool senalPerdida = sinPaquetes || calidadBaja;
+
+  if (senalPerdida && !buzzerActivo) {
+    buzzerActivo = true;
+    alarmIndex = 0;
+    alarmNotaMillis = millis();
+    ledcWriteTone(BUZZER_LEDC_CHANNEL, ALARM_NOTAS[0]);
+    if (sinPaquetes) Serial.println(F("[ALARMA] Sin paquetes RF — buzzer activado"));
+    else             Serial.printf("[ALARMA] Calidad de señal baja (%.1f%%) — buzzer activado\n", ultimaCalidadPct);
+  } else if (!senalPerdida && buzzerActivo) {
+    buzzerActivo = false;
+    ledcWriteTone(BUZZER_LEDC_CHANNEL, 0);
+    Serial.println(F("[ALARMA] Señal restablecida — buzzer apagado"));
+  }
+}
+
+// =============================================================================
 // LOOP PRINCIPAL — Recibir paquete RF → Publicar MQTT
 // =============================================================================
 void loop() {
@@ -461,6 +554,8 @@ void loop() {
   // ── Escuchar NRF24L01 ─────────────────────────────────────────────────────
   if (radio.available()) {
     radio.read(rxBuffer, sizeof(rxBuffer));
+
+    ultimoPaqueteMillis = millis();  // llegó un paquete → resetea el timeout de la alarma
 
     uint8_t type = rxBuffer[0];  // Primer byte = identificador de tópico
     Serial.printf("[RF] Paquete type=%d recibido\n", type);
@@ -500,6 +595,7 @@ void loop() {
       case 6: {
         PktComunicacion pkt;
         memcpy(&pkt, rxBuffer, sizeof(pkt));
+        ultimaCalidadPct = pkt.calidad_pct;  // usado por revisarSenalPerdida() para la alarma
         publicarComunicacion(pkt, true);
         break;
       }
@@ -508,4 +604,8 @@ void loop() {
         break;
     }
   }
+
+  // ── Alarma de pérdida de señal (se revisa en cada vuelta, haya o no paquete) ─
+  revisarSenalPerdida();
+  actualizarAlarmaBuzzer();
 }

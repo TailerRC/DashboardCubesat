@@ -10,7 +10,8 @@ const KEY_MAP = {
   temperatura_c: 'temp',
   radiacion_uv: 'uv',
   humedad_pct: 'hum',
-  presion_pa: 'pres'
+  presion_pa: 'pres',
+  altura_barometrica_m: 'alt'
 };
 
 // Parámetros de referencia en tierra para calibración de humedad
@@ -55,7 +56,8 @@ export function useAmbientalMqtt() {
         hace_seg: 0.0,
         stale: false,
         history: [],
-        umbral_alerta: threshold
+        umbral_alerta: threshold,
+        ...(key === 'altura_barometrica_m' ? { calibrando: true } : {})
       };
     });
     return initial;
@@ -151,6 +153,7 @@ export function useAmbientalMqtt() {
           let hace_seg = prevSensor.hace_seg;
           let umbral_alerta = prevSensor.umbral_alerta;
           let stale = prevSensor.stale;
+          let calibrando = prevSensor.calibrando;
 
           if (!isPacketLostOrCorrupt) {
             let sensorVal = packet.data[key];
@@ -192,6 +195,10 @@ export function useAmbientalMqtt() {
                 : (SENSOR_CONFIGS[KEY_MAP[key]]?.threshold ?? prevSensor.umbral_alerta);
               stale = false;
 
+              if (key === 'altura_barometrica_m') {
+                calibrando = (typeof sensorVal === 'object' && sensorVal !== null) ? !!sensorVal.calibrando : false;
+              }
+
               // Store timestamp when this valid value arrived
               lastValidRecvTimeRef.current[key] = packetTime - (hace_seg * 1000);
             }
@@ -216,7 +223,8 @@ export function useAmbientalMqtt() {
             hace_seg,
             umbral_alerta,
             stale,
-            history: shiftedHist
+            history: shiftedHist,
+            ...(prevSensor.calibrando !== undefined ? { calibrando } : {})
           };
         });
 

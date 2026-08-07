@@ -53,6 +53,15 @@ export const SENSOR_CONFIGS = {
     threshold: 7.5,
     decimals: 1,
     color: '#ff9800'
+  },
+  alt: {
+    label: 'Altitud Barométrica',
+    unit: 'm',
+    yMin: 0,
+    yMax: 200,
+    threshold: null,
+    decimals: 1,
+    color: '#ff9800'
   }
 };
 
@@ -130,6 +139,22 @@ export function getSensorValueAtTime(sensorKey, secondsElapsed) {
       }
       break;
 
+    case 'alt':
+      // Since secondsElapsed might be simulatedTimeSecs, we can check if it is < 15
+      if (secondsElapsed < 15.0) {
+        val = 0;
+      } else {
+        const cTime = secondsElapsed % 120;
+        if (cTime < 60) {
+          val = Math.sin((cTime / 60) * (Math.PI / 2)) * 115;
+        } else {
+          val = Math.cos(((cTime - 60) / 60) * (Math.PI / 2)) * 115;
+        }
+        val += (Math.random() - 0.5) * 1.5;
+        if (val < 0) val = 0;
+      }
+      break;
+
     default:
       val = 0;
   }
@@ -186,12 +211,16 @@ function publishNextPacket() {
       lastPresion = basePres;
     }
 
+    const calibrating = simulatedTimeSecs < 15.0;
+    const altitudeVal = getSensorValueAtTime('alt', simulatedTimeSecs);
+
     data = {
       co2_ppm:       { v: co2Val, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.co2.threshold },
       temperatura_c: { v: tempVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.temp.threshold },
       radiacion_uv:  { v: uvVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.uv.threshold },
       humedad_pct:   { v: humVal, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.hum.threshold },
-      presion_pa:    { v: lastPresion, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.pres.threshold }
+      presion_pa:    { v: lastPresion, hace_seg: 0.0, umbral_alerta: SENSOR_CONFIGS.pres.threshold },
+      altura_barometrica_m: { v: altitudeVal, hace_seg: 0.0, calibrando: calibrating }
     };
 
     // Calculate baseline warning state

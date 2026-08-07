@@ -57,7 +57,9 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
 
   const lat = fmt(ubiData?.latitud?.v, 4);
   const lon = fmt(ubiData?.longitud?.v, 4);
-  const alt = fmt(ubiData?.altitud_gps?.v, 1);
+  const alt = ambSensors?.altura_barometrica_m?.calibrando
+    ? 'Calib.'
+    : fmt(ambSensors?.altura_barometrica_m?.v, 1);
   const vel = fmt(ubiData?.velocidad_kmh?.v, 1);
   const dist = fmt(ubiData?.distancia_origen?.v, 1);
   const sats = ubiData?.satelites?.v !== undefined && ubiData?.satelites?.v !== null ? ubiData.satelites.v : '---';
@@ -78,7 +80,7 @@ export default function TopBar({ viewName = 'Vista General', scrollPct = 0 }) {
     { label: 'Voltaje:', value: `${volt} V`, color: '#ef5350' },
     { label: 'Corriente:', value: `${curr} mA`, color: '#42a5f5' },
     { label: 'Consumo:', value: `${cons} W`, color: '#ba68c8' },
-    { label: 'Altitud Vuelo:', value: `${alt} m`, color: '#ef5350' },
+    { label: 'Altitud Vuelo:', value: ambSensors?.altura_barometrica_m?.calibrando ? alt : `${alt} m`, color: '#ef5350' },
     { label: 'Latitud:', value: `${lat}°`, color: '#4fc3f7' },
     { label: 'Longitud:', value: `${lon}°`, color: '#4fc3f7' },
     { label: 'CO2:', value: `${co2} ppm`, color: '#f9a825' },
